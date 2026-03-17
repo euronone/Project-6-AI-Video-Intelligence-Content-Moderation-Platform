@@ -3,23 +3,23 @@
 ### 1️⃣ Fork the Repository
 
 ```
-1. Go to: https://github.com/euronone/Project-7-AI-Financial-Intelligence-Fraud-Detection-Engine
+1. Go to: https://github.com/euronone/Project-6-AI-Video-Intelligence-Content-Moderation-Platform.git
 2. Click "Fork" button (top right)
 3. This creates a copy under their own GitHub account
-   → https://github.com/their-username/Project-7-AI-Financial-Intelligence-Fraud-Detection-Engine
+   → https://github.com/euronone/Project-6-AI-Video-Intelligence-Content-Moderation-Platform.git
 ```
 
 ### 2️⃣ Clone Their Fork (Not the Original)
 ```
 # Clone THEIR fork, not the original repo
-git clone https://github.com/their-username/Project-7-AI-Financial-Intelligence-Fraud-Detection-Engine.git
-cd Project-7-AI-Financial-Intelligence-Fraud-Detection-Engine
+git clone https://github.com/euronone/Project-6-AI-Video-Intelligence-Content-Moderation-Platform.git
+cd Project-6-AI-Video-Intelligence-Content-Moderation-Platform
 ```
 
 ### 3️⃣ Add Original Repo as "Upstream"
 ```
 # This lets them sync with the original project
-git remote add upstream https://github.com/euronone/Project-7-AI-Financial-Intelligence-Fraud-Detection-Engine.git
+git remote add upstream https://github.com/euronone/Project-6-AI-Video-Intelligence-Content-Moderation-Platform.git
 
 # Verify remotes
 git remote -v
@@ -47,7 +47,7 @@ git checkout -b feature/my-new-feature
 
 # Commit changes
 git add .
-git commit -m "feat: add new fraud detection algorithm"
+git commit -m "feat: add new <feature name>"
 ```
 
 ### 6️⃣ Push to Their Fork
@@ -61,9 +61,9 @@ git push origin feature/my-new-feature
 1. Go to THEIR fork on GitHub
 2. GitHub shows: "Compare & pull request" button (click it)
 3. Make sure it shows:
-   - Base repository: euronone/Project-7... 
+   - Base repository: euronone/Project-6... 
    - Base branch: development ⭐
-   - Head repository: their-username/Project-7...
+   - Head repository: their-username/Project-6...
    - Compare branch: feature/my-new-feature
 4. Fill in PR description
 5. Click "Create pull request"
