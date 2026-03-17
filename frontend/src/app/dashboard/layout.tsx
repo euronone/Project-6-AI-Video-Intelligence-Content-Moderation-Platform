@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
@@ -13,25 +13,33 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { isAuthenticated } = useAuthStore();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const router = useRouter();
+  // Wait for Zustand persist to rehydrate from localStorage before
+  // deciding whether to redirect. Without this, the initial SSR/hydration
+  // render always sees isAuthenticated=false and immediately redirects.
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (hydrated && !isAuthenticated) {
       router.replace(ROUTES.login);
     }
-  }, [isAuthenticated, router]);
+  // router is a stable ref; omitting it avoids spurious re-runs
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, isAuthenticated]);
 
-  if (!isAuthenticated) {
+  // Show nothing until we know the auth state
+  if (!hydrated || !isAuthenticated) {
     return null;
   }
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar */}
       <Sidebar className="hidden lg:flex" />
-
-      {/* Main content area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
         <main className="flex-1 overflow-y-auto p-6" id="main-content">

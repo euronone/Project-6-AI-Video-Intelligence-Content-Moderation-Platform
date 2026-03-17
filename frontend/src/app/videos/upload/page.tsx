@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { UploadDropzone, type UploadFile } from '@/components/video/UploadDropzone';
 import { useUploadVideo } from '@/hooks/useVideo';
+import { useShallow } from 'zustand/react/shallow';
 import { useVideoStore } from '@/stores/videoStore';
 import { ROUTES } from '@/lib/constants';
 
@@ -14,7 +15,7 @@ export default function UploadPage() {
   const router = useRouter();
   const [files, setFiles] = useState<UploadFile[]>([]);
   const { mutate: upload, isPending } = useUploadVideo();
-  const uploads = useVideoStore((s) => s.uploads);
+  const uploads = useVideoStore(useShallow((s) => s.uploads));
 
   const currentUpload = uploads.find(
     (u) => files.some((f) => f.file.name === u.filename) && u.status === 'uploading'

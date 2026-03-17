@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
+import { useShallow } from 'zustand/react/shallow';
 import { useModerationStore, selectUndismissedAlerts } from '@/stores/moderationStore';
 
 interface HeaderProps {
@@ -21,7 +22,7 @@ interface HeaderProps {
 
 export function Header({ className }: HeaderProps) {
   const { user, logout } = useAuth();
-  const undismissedAlerts = useModerationStore(selectUndismissedAlerts);
+  const undismissedAlerts = useModerationStore(useShallow(selectUndismissedAlerts));
 
   const initials = user?.name
     ? user.name

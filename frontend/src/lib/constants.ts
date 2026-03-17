@@ -1,8 +1,14 @@
+// Empty string = relative paths (same origin). Falls back to localhost:8000
+// only when the env var is completely absent (not set to "").
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  process.env.NEXT_PUBLIC_API_URL !== undefined
+    ? process.env.NEXT_PUBLIC_API_URL
+    : 'http://localhost:8000';
 
 export const WS_URL =
-  process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:8000';
+  process.env.NEXT_PUBLIC_WS_URL !== undefined
+    ? process.env.NEXT_PUBLIC_WS_URL
+    : 'http://localhost:8000';
 
 export const API_V1 = '/api/v1';
 

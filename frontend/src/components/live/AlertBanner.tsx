@@ -3,12 +3,13 @@
 import { X, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useShallow } from 'zustand/react/shallow';
 import { useModerationStore, selectUndismissedAlerts } from '@/stores/moderationStore';
 import { formatDistanceToNow } from 'date-fns';
 import { VIOLATION_CATEGORY_LABELS } from '@/lib/constants';
 
 export function AlertBanner() {
-  const alerts = useModerationStore(selectUndismissedAlerts);
+  const alerts = useModerationStore(useShallow(selectUndismissedAlerts));
   const { dismissAlert } = useModerationStore();
 
   if (alerts.length === 0) return null;

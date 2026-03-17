@@ -46,6 +46,7 @@ export const useVideoStore = create<VideoState & VideoActions>()((set) => ({
   clearUploads: () => set({ uploads: [] }),
 }));
 
-// Selector helpers
+// Selector helpers — wrap with useShallow() at call sites to avoid
+// infinite re-render loops from .filter() returning new array references.
 export const selectActiveUploads = (state: VideoState & VideoActions) =>
   state.uploads.filter((u) => u.status === 'uploading' || u.status === 'registering');
