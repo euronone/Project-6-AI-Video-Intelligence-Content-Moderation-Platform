@@ -1,0 +1,96 @@
+'use client';
+
+import { Bell, LogOut, User } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/hooks/useAuth';
+import { useModerationStore, selectUndismissedAlerts } from '@/stores/moderationStore';
+
+interface HeaderProps {
+  className?: string;
+}
+
+export function Header({ className }: HeaderProps) {
+  const { user, logout } = useAuth();
+  const undismissedAlerts = useModerationStore(selectUndismissedAlerts);
+
+  const initials = user?.name
+    ? user.name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    : 'U';
+
+  return (
+    <header
+      className={`flex h-16 items-center justify-between border-b border-border bg-background px-6 ${className ?? ''}`}
+    >
+      <div className="flex items-center gap-2">
+        {user?.organization_id && (
+          <span className="text-sm text-muted-foreground">
+            {user.organization_id}
+          </span>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        {/* Alert bell */}
+        <Button variant="ghost" size="icon" className="relative" aria-label="Alerts">
+          <Bell className="h-4 w-4" />
+          {undismissedAlerts.length > 0 && (
+            <Badge
+              variant="destructive"
+              className="absolute -right-1 -top-1 h-4 w-4 rounded-full p-0 text-[10px] flex items-center justify-center"
+            >
+              {undismissedAlerts.length > 9 ? '9+' : undismissedAlerts.length}
+            </Badge>
+          )}
+        </Button>
+
+        {/* User menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="flex items-center gap-2 px-2" aria-label="User menu">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+              </Avatar>
+              <span className="hidden text-sm font-medium sm:block">{user?.name}</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium">{user?.name}</p>
+                <p className="text-xs text-muted-foreground">{user?.email}</p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>
+              <User className="mr-2 h-4 w-4" />
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={logout}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </header>
+  );
+}
