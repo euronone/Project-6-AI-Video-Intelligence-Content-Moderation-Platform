@@ -27,7 +27,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
-from app.ai.prompts.summary_prompts import REPORT_SYSTEM
+from app.ai.prompts.summary_prompts import SUMMARY_SYSTEM, SUMMARY_USER
 from app.config import settings
 
 logger = structlog.get_logger(__name__)
@@ -48,33 +48,6 @@ class SummaryOutput(BaseModel):
         default="G",
         description="Estimated content rating: G, PG, PG-13, R, or NC-17.",
     )
-
-
-# ── System prompt ─────────────────────────────────────────────────────────────
-
-_SYSTEM = """\
-You are an AI video summarization assistant. Given a video transcript and content
-analysis, produce a concise executive summary suitable for a content moderation platform.
-
-Return a JSON object:
-{
-  "executive_summary": "<2-4 sentence summary>",
-  "key_moments": ["<moment 1>", "<moment 2>"],
-  "content_rating": "G" | "PG" | "PG-13" | "R" | "NC-17"
-}
-No markdown, no extra text.
-"""
-
-_USER_TEMPLATE = """\
-Summarise this video.
-
-Content summary: {content_summary}
-Topics: {topics}
-Duration: {duration}
-Transcript excerpt: {transcript}
-
-Return only the JSON object.
-"""
 
 
 # ── Chain factory ─────────────────────────────────────────────────────────────
@@ -124,7 +97,7 @@ async def run_summary_chain(
     topics_str = ", ".join(topics) if topics else "not specified"
     transcript_excerpt = transcript[:2000] if transcript else "(no transcript)"
 
-    user_content = _USER_TEMPLATE.format(
+    user_content = SUMMARY_USER.format(
         content_summary=content_summary or "(no summary available)",
         topics=topics_str,
         duration=duration_str,
@@ -132,7 +105,7 @@ async def run_summary_chain(
     )
 
     messages = [
-        SystemMessage(content=_SYSTEM),
+        SystemMessage(content=SUMMARY_SYSTEM),
         HumanMessage(content=user_content),
     ]
 
