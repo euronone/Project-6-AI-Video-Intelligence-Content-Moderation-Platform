@@ -139,6 +139,50 @@ yarn-error.log*
 pnpm-debug.log*
 
 # ────────────────────────────────────────────────────────────
+# AI / ML — model artefacts & data
+# ────────────────────────────────────────────────────────────
+# Model weights & checkpoints
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+*.pb
+*.h5
+*.bin
+models/
+checkpoints/
+weights/
+
+# Vector store / embeddings cache
+pinecone_cache/
+embeddings_cache/
+*.faiss
+*.index
+
+# LangChain / LangGraph cache
+.langchain/
+langchain_cache/
+langgraph_cache/
+
+# Video & audio processing artefacts
+frames/
+thumbnails/
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.wav
+*.mp3
+*.m4a
+backend/app/ai/data/
+backend/tmp_frames/
+
+# OpenAI / API response caches (never store real API responses in repo)
+openai_cache/
+response_cache/
+
+# ────────────────────────────────────────────────────────────
 # Misc / temp
 # ────────────────────────────────────────────────────────────
 *.tmp
