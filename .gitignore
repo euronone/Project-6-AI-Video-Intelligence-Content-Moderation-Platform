@@ -164,6 +164,11 @@ embeddings_cache/
 .langchain/
 langchain_cache/
 langgraph_cache/
+langchain.db
+
+# LangSmith tracing (never commit API keys or trace exports)
+langsmith_traces/
+.langsmith
 
 # Video & audio processing artefacts
 frames/
