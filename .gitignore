@@ -38,6 +38,8 @@ frontend/.eslintcache
 frontend/coverage/
 frontend/playwright-report/
 frontend/test-results/
+frontend/.jest-cache/
+frontend/jest-results/
 frontend/.vercel
 frontend/next-env.d.ts
 
