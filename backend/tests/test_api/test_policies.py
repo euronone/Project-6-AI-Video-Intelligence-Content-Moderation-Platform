@@ -17,29 +17,19 @@ _POLICY_PAYLOAD = {
 }
 
 
-async def _get_admin_token(client: AsyncClient) -> str:
-    resp = await client.post(
-        "/api/v1/auth/register",
-        json={"email": "admin@test.com", "password": "password1234"},
-    )
-    return resp.json()["access_token"]
-
-
 @pytest.mark.asyncio
-async def test_list_policies_empty(client: AsyncClient) -> None:
-    token = await _get_admin_token(client)
-    resp = await client.get(POLICIES_URL, headers={"Authorization": f"Bearer {token}"})
+async def test_list_policies_empty(client: AsyncClient, admin_token: str) -> None:
+    resp = await client.get(POLICIES_URL, headers={"Authorization": f"Bearer {admin_token}"})
     assert resp.status_code == 200
     assert resp.json()["items"] == []
 
 
 @pytest.mark.asyncio
-async def test_create_policy(client: AsyncClient) -> None:
-    token = await _get_admin_token(client)
+async def test_create_policy(client: AsyncClient, admin_token: str) -> None:
     resp = await client.post(
         POLICIES_URL,
         json=_POLICY_PAYLOAD,
-        headers={"Authorization": f"Bearer {token}"},
+        headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert resp.status_code == 201
     data = resp.json()
@@ -48,38 +38,35 @@ async def test_create_policy(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_policy(client: AsyncClient) -> None:
-    token = await _get_admin_token(client)
-    created = await client.post(POLICIES_URL, json=_POLICY_PAYLOAD, headers={"Authorization": f"Bearer {token}"})
+async def test_get_policy(client: AsyncClient, admin_token: str) -> None:
+    created = await client.post(POLICIES_URL, json=_POLICY_PAYLOAD, headers={"Authorization": f"Bearer {admin_token}"})
     policy_id = created.json()["id"]
 
-    resp = await client.get(f"{POLICIES_URL}/{policy_id}", headers={"Authorization": f"Bearer {token}"})
+    resp = await client.get(f"{POLICIES_URL}/{policy_id}", headers={"Authorization": f"Bearer {admin_token}"})
     assert resp.status_code == 200
     assert resp.json()["id"] == policy_id
 
 
 @pytest.mark.asyncio
-async def test_update_policy(client: AsyncClient) -> None:
-    token = await _get_admin_token(client)
-    created = await client.post(POLICIES_URL, json=_POLICY_PAYLOAD, headers={"Authorization": f"Bearer {token}"})
+async def test_update_policy(client: AsyncClient, admin_token: str) -> None:
+    created = await client.post(POLICIES_URL, json=_POLICY_PAYLOAD, headers={"Authorization": f"Bearer {admin_token}"})
     policy_id = created.json()["id"]
 
     resp = await client.put(
         f"{POLICIES_URL}/{policy_id}",
         json={"name": "Updated Policy"},
-        headers={"Authorization": f"Bearer {token}"},
+        headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert resp.status_code == 200
     assert resp.json()["name"] == "Updated Policy"
 
 
 @pytest.mark.asyncio
-async def test_delete_policy(client: AsyncClient) -> None:
-    token = await _get_admin_token(client)
-    created = await client.post(POLICIES_URL, json=_POLICY_PAYLOAD, headers={"Authorization": f"Bearer {token}"})
+async def test_delete_policy(client: AsyncClient, admin_token: str) -> None:
+    created = await client.post(POLICIES_URL, json=_POLICY_PAYLOAD, headers={"Authorization": f"Bearer {admin_token}"})
     policy_id = created.json()["id"]
 
-    resp = await client.delete(f"{POLICIES_URL}/{policy_id}", headers={"Authorization": f"Bearer {token}"})
+    resp = await client.delete(f"{POLICIES_URL}/{policy_id}", headers={"Authorization": f"Bearer {admin_token}"})
     assert resp.status_code == 204
 
 
