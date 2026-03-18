@@ -31,7 +31,7 @@ async def db_engine():
 
 @pytest_asyncio.fixture(scope="function")
 async def db_session(db_engine):
-    factory = async_sessionmaker(bind=db_engine, expire_on_commit=False, autoflush=False)
+    factory = async_sessionmaker(bind=db_engine, expire_on_commit=False, autoflush=True)
     async with factory() as session:
         yield session
 
@@ -67,3 +67,30 @@ async def client(db_session, redis_client):
         yield ac
 
     app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def admin_token(client: AsyncClient, db_session: AsyncSession) -> str:
+    """Register a user, promote to ADMIN in DB, and return a fresh access token."""
+    import uuid
+    from sqlalchemy import update
+    from app.models.user import User, UserRole
+
+    resp = await client.post(
+        "/api/v1/auth/register",
+        json={"email": "testadmin@vidshield.ai", "password": "adminpass123"},
+    )
+    user_id = uuid.UUID(resp.json()["user"]["id"])
+
+    await db_session.execute(
+        update(User).where(User.id == user_id).values(role=UserRole.ADMIN)
+    )
+    await db_session.commit()
+
+    # Re-login to get a token (role is read from DB on each request so same token works,
+    # but re-login is cleaner for test clarity)
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "testadmin@vidshield.ai", "password": "adminpass123"},
+    )
+    return login.json()["access_token"]

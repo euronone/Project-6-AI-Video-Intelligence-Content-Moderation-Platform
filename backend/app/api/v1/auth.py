@@ -139,7 +139,10 @@ async def refresh(
     if not stored_user_id:
         raise UnauthorizedError("Refresh token has been revoked or expired.")
 
-    result = await db.execute(select(User).where(User.id == stored_user_id, User.is_active == True))
+    import uuid as _uuid
+    result = await db.execute(
+        select(User).where(User.id == _uuid.UUID(stored_user_id), User.is_active == True)
+    )
     user = result.scalar_one_or_none()
     if user is None:
         raise UnauthorizedError("User not found or inactive.")

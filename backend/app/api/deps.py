@@ -1,3 +1,4 @@
+import uuid
 from typing import Annotated
 
 import structlog
@@ -37,7 +38,12 @@ async def get_current_user(
     if not user_id:
         raise UnauthorizedError("Token subject missing.")
 
-    result = await db.execute(select(User).where(User.id == user_id, User.is_active == True))
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise UnauthorizedError("Invalid token subject.")
+
+    result = await db.execute(select(User).where(User.id == user_uuid, User.is_active == True))
     user = result.scalar_one_or_none()
 
     if user is None:
