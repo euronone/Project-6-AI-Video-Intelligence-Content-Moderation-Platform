@@ -47,7 +47,7 @@ class TestRunModerationTask:
         mock_run.side_effect = RuntimeError("graph failure")
 
         from app.workers.moderation_tasks import run_moderation_task
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017 — retry wraps varied error types
             run_moderation_task.apply(args=[_VIDEO_ID]).get(propagate=True)
 
     @patch("app.workers.moderation_tasks.sync_session")

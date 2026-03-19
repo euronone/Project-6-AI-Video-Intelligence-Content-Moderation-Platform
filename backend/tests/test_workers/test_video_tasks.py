@@ -56,7 +56,7 @@ class TestExtractFramesTask:
 
         mock_extract.side_effect = FrameExtractionError("cannot open video")
 
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017 — retry wraps varied error types
             extract_frames_task.apply(args=[_VIDEO_ID, _S3_KEY]).get(propagate=True)
 
 
@@ -97,7 +97,7 @@ class TestTranscribeAudioTask:
         mock_s3_client.return_value = mock_s3
 
         from app.workers.video_tasks import transcribe_audio_task
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017 — retry wraps varied error types
             transcribe_audio_task.apply(args=[_VIDEO_ID, _S3_KEY]).get(propagate=True)
 
 
@@ -196,7 +196,7 @@ class TestRunAnalysisPipelineTask:
         mock_run.side_effect = RuntimeError("LangGraph error")
 
         from app.workers.video_tasks import run_analysis_pipeline_task
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017 — retry wraps varied error types
             run_analysis_pipeline_task.apply(args=[_VIDEO_ID, _S3_KEY]).get(propagate=True)
 
         mock_set_status.assert_called()

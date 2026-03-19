@@ -70,20 +70,20 @@ module "vpc" {
 module "rds" {
   source = "./modules/rds"
 
-  project               = var.project
-  environment           = var.environment
-  vpc_id                = module.vpc.vpc_id
-  subnet_ids            = module.vpc.private_subnet_ids
-  security_group_id     = module.vpc.sg_rds_id
-  instance_class        = var.rds_instance_class
-  allocated_storage     = var.rds_allocated_storage
-  max_allocated_storage = var.rds_max_allocated_storage
-  multi_az              = var.rds_multi_az
-  backup_retention_days = var.rds_backup_retention_days
-  deletion_protection   = var.rds_deletion_protection
-  skip_final_snapshot   = var.rds_skip_final_snapshot
+  project                = var.project
+  environment            = var.environment
+  vpc_id                 = module.vpc.vpc_id
+  subnet_ids             = module.vpc.private_subnet_ids
+  security_group_id      = module.vpc.sg_rds_id
+  instance_class         = var.rds_instance_class
+  allocated_storage      = var.rds_allocated_storage
+  max_allocated_storage  = var.rds_max_allocated_storage
+  multi_az               = var.rds_multi_az
+  backup_retention_days  = var.rds_backup_retention_days
+  deletion_protection    = var.rds_deletion_protection
+  skip_final_snapshot    = var.rds_skip_final_snapshot
   db_password_secret_arn = var.db_password_secret_arn
-  tags                  = var.tags
+  tags                   = var.tags
 }
 
 # ── Module: ElastiCache Redis 7 (I-04) ────────────────────────────────────────
@@ -117,9 +117,9 @@ module "s3" {
 module "ecs" {
   source = "./modules/ecs"
 
-  project    = var.project
-  environment = var.environment
-  aws_region  = var.aws_region
+  project        = var.project
+  environment    = var.environment
+  aws_region     = var.aws_region
   aws_account_id = local.account_id
 
   vpc_id             = module.vpc.vpc_id
@@ -142,12 +142,12 @@ module "ecs" {
   frontend_memory        = var.frontend_memory
   frontend_desired_count = var.frontend_desired_count
 
-  db_secret_arn          = var.db_secret_arn
-  redis_secret_arn       = var.redis_secret_arn
-  secret_key_arn         = var.secret_key_arn
-  openai_api_key_arn     = var.openai_api_key_arn
-  pinecone_api_key_arn   = var.pinecone_api_key_arn
-  sentry_dsn_arn         = var.sentry_dsn_arn
+  db_secret_arn        = var.db_secret_arn
+  redis_secret_arn     = var.redis_secret_arn
+  secret_key_arn       = var.secret_key_arn
+  openai_api_key_arn   = var.openai_api_key_arn
+  pinecone_api_key_arn = var.pinecone_api_key_arn
+  sentry_dsn_arn       = var.sentry_dsn_arn
 
   s3_videos_bucket     = module.s3.videos_bucket_id
   s3_thumbnails_bucket = module.s3.thumbnails_bucket_id

@@ -2,14 +2,14 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 
 def _utc_now():
-    return datetime.now(timezone.utc)
+    return datetime.now(datetime.UTC)
 
 
 # ── cleanup_temp_frames_task ───────────────────────────────────────────────────
@@ -75,7 +75,7 @@ class TestCleanupTempFramesTask:
         mock_boto_client.side_effect = Exception("S3 connection refused")
 
         from app.workers.cleanup_tasks import cleanup_temp_frames_task
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017 — retry wraps varied error types
             cleanup_temp_frames_task.apply(args=[24]).get(propagate=True)
 
 
@@ -119,7 +119,7 @@ class TestPurgeStaleJobsTask:
         mock_sync_session.return_value = mock_db
 
         from app.workers.cleanup_tasks import purge_stale_jobs_task
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017 — retry wraps varied error types
             purge_stale_jobs_task.apply().get(propagate=True)
 
 

@@ -8,8 +8,8 @@ locals {
     },
     var.tags,
   )
-  log_group_api    = "/ecs/${local.name_prefix}/api"
-  log_group_worker = "/ecs/${local.name_prefix}/worker"
+  log_group_api      = "/ecs/${local.name_prefix}/api"
+  log_group_worker   = "/ecs/${local.name_prefix}/worker"
   log_group_frontend = "/ecs/${local.name_prefix}/frontend"
 }
 

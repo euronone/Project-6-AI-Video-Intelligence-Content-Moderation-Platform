@@ -55,7 +55,7 @@ class TestAggregateDailyStatsTask:
         mock_sync_session.return_value = mock_db
 
         from app.workers.analytics_tasks import aggregate_daily_stats_task
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017 — retry wraps varied error types
             aggregate_daily_stats_task.apply(args=["2026-03-18"]).get(propagate=True)
 
     @patch("app.workers.analytics_tasks.sync_session")

@@ -23,7 +23,7 @@ import subprocess
 import tempfile
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 import boto3
@@ -65,7 +65,7 @@ def _set_video_status(video_id: str, status: VideoStatus, error: str | None = No
             video.status = status
             if error:
                 video.error_message = error
-            video.updated_at = datetime.now(timezone.utc)
+            video.updated_at = datetime.now(datetime.UTC)
 
 
 # ── W-02-A: Frame extraction ───────────────────────────────────────────────────
@@ -109,7 +109,7 @@ def extract_frames_task(
         }
     except FrameExtractionError as exc:
         logger.error("extract_frames_task_error", video_id=video_id, error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 # ── W-02-B: Audio transcription ────────────────────────────────────────────────
@@ -154,7 +154,7 @@ def transcribe_audio_task(
         }
     except Exception as exc:
         logger.error("transcribe_audio_task_error", video_id=video_id, error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     finally:
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
@@ -207,14 +207,14 @@ def generate_thumbnail_task(self, video_id: str, s3_key: str) -> str | None:
             video = db.get(Video, uuid.UUID(video_id))
             if video:
                 video.thumbnail_s3_key = thumb_key
-                video.updated_at = datetime.now(timezone.utc)
+                video.updated_at = datetime.now(datetime.UTC)
 
         logger.info("generate_thumbnail_task_done", video_id=video_id, thumb_key=thumb_key)
         return thumb_key
 
     except Exception as exc:
         logger.error("generate_thumbnail_task_error", video_id=video_id, error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     finally:
         for p in (tmp_video, tmp_thumb):
             if os.path.exists(p):
@@ -260,7 +260,7 @@ def run_analysis_pipeline_task(
     except Exception as exc:
         logger.error("run_analysis_pipeline_task_error", video_id=video_id, error=str(exc))
         _set_video_status(video_id, VideoStatus.FAILED, error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
     # Map AI decision to DB status
     _DECISION_TO_STATUS: dict[str, ModerationStatus] = {
@@ -283,7 +283,7 @@ def run_analysis_pipeline_task(
             existing.violations = [v.model_dump() for v in report.violations]
             existing.summary = report.content_summary
             existing.ai_model = settings.OPENAI_MODEL
-            existing.updated_at = datetime.now(timezone.utc)
+            existing.updated_at = datetime.now(datetime.UTC)
         else:
             db.add(
                 ModerationResult(
@@ -300,7 +300,7 @@ def run_analysis_pipeline_task(
         video = db.get(Video, uuid.UUID(video_id))
         if video:
             video.status = VideoStatus.READY
-            video.updated_at = datetime.now(timezone.utc)
+            video.updated_at = datetime.now(datetime.UTC)
 
     logger.info(
         "run_analysis_pipeline_task_done",
@@ -376,4 +376,4 @@ def process_video(
     except Exception as exc:
         logger.error("process_video_failed", video_id=video_id, error=str(exc))
         _set_video_status(video_id, VideoStatus.FAILED, error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc

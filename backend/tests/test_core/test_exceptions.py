@@ -1,6 +1,9 @@
 """Tests for app.core.exceptions — error envelope shape and HTTP status codes."""
+import json
+from unittest.mock import MagicMock
+
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from httpx import ASGITransport, AsyncClient
 
@@ -106,11 +109,6 @@ async def test_validation_error_status(ac: AsyncClient):
 async def test_unhandled_exception_handler_returns_500_directly():
     """Unit-test the handler function directly; bypasses FastAPI's ServerErrorMiddleware
     which re-raises raw RuntimeError before custom Exception handlers can intercept."""
-    import json
-    from unittest.mock import MagicMock
-
-    from fastapi import Request
-
     mock_request = MagicMock(spec=Request)
     response = await unhandled_exception_handler(mock_request, RuntimeError("unexpected boom"))
     assert response.status_code == 500

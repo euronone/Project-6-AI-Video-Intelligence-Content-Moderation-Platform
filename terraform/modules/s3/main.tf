@@ -10,9 +10,9 @@ locals {
   )
 
   # Bucket names must be globally unique; include account ID as suffix
-  videos_bucket    = "${local.name_prefix}-videos-${var.aws_account_id}"
+  videos_bucket     = "${local.name_prefix}-videos-${var.aws_account_id}"
   thumbnails_bucket = "${local.name_prefix}-thumbnails-${var.aws_account_id}"
-  artifacts_bucket = "${local.name_prefix}-artifacts-${var.aws_account_id}"
+  artifacts_bucket  = "${local.name_prefix}-artifacts-${var.aws_account_id}"
 }
 
 # ── Videos Bucket ──────────────────────────────────────────────────────────────
