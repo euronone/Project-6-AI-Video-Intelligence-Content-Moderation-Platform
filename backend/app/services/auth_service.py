@@ -13,14 +13,14 @@ Public API:
 """
 from __future__ import annotations
 
+import uuid
 from datetime import timedelta
 
+import redis.asyncio as aioredis
 import structlog
 from jose import JWTError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-import redis.asyncio as aioredis
 
 from app.config import settings
 from app.core.exceptions import ConflictError, NotFoundError, UnauthorizedError
@@ -127,12 +127,10 @@ class AuthService:
         Returns:
             New TokenPair.
         """
-        import uuid as _uuid
-
         try:
             payload = decode_token(refresh_token)
-        except JWTError:
-            raise UnauthorizedError("Invalid or expired refresh token.")
+        except JWTError as err:
+            raise UnauthorizedError("Invalid or expired refresh token.") from err
 
         if payload.get("type") != "refresh":
             raise UnauthorizedError("Invalid token type.")
@@ -144,7 +142,7 @@ class AuthService:
 
         result = await self._db.execute(
             select(User).where(
-                User.id == _uuid.UUID(stored_user_id),
+                User.id == uuid.UUID(stored_user_id),
                 User.is_active == True,
             )
         )
