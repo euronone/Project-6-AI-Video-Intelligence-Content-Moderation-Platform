@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 import structlog
@@ -51,12 +51,12 @@ def _build_video_response(video: Video, storage: StorageService | None = None) -
         except (json.JSONDecodeError, TypeError):
             tags = None
 
-    s3_url: str | None = None
+    _s3_url: str | None = None
     if storage and video.s3_key:
         try:
-            s3_url = storage.presigned_get_url(video.s3_key)
+            _s3_url = storage.presigned_get_url(video.s3_key)
         except Exception:
-            s3_url = None
+            _s3_url = None
 
     return VideoResponse(
         id=video.id,
@@ -319,7 +319,7 @@ class VideoService:
         if not video:
             raise NotFoundError("Video", str(video_id))
 
-        video.deleted_at = datetime.now(timezone.utc).isoformat()
+        video.deleted_at = datetime.now(datetime.UTC).isoformat()
         video.status = VideoStatus.DELETED
 
         from app.workers.cleanup_tasks import cleanup_temp_frames_task

@@ -20,7 +20,7 @@ import hashlib
 import hmac
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 import httpx
@@ -88,7 +88,7 @@ def run_moderation_task(
         )
     except Exception as exc:
         logger.error("run_moderation_task_error", video_id=video_id, error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
     _DECISION_TO_STATUS: dict[str, ModerationStatus] = {
         "approved": ModerationStatus.APPROVED,
@@ -107,7 +107,7 @@ def run_moderation_task(
         if mod:
             mod.status = new_status
             mod.overall_confidence = result.confidence
-            mod.updated_at = datetime.now(timezone.utc)
+            mod.updated_at = datetime.now(datetime.UTC)
 
     logger.info(
         "run_moderation_task_done",
@@ -187,7 +187,7 @@ def apply_policy_task(
 
             if new_status != mod.status:
                 mod.status = new_status
-                mod.updated_at = datetime.now(timezone.utc)
+                mod.updated_at = datetime.now(datetime.UTC)
 
         logger.info(
             "apply_policy_task_done",
@@ -202,7 +202,7 @@ def apply_policy_task(
 
     except Exception as exc:
         logger.error("apply_policy_task_error", error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 # ── W-03-C: Dispatch outbound webhooks ────────────────────────────────────────
@@ -268,7 +268,7 @@ def dispatch_webhooks_task(
                 ep = db.get(WebhookEndpoint, endpoint.id)
                 if ep:
                     ep.total_deliveries += 1
-                    ep.last_delivery_at = datetime.now(timezone.utc).isoformat()
+                    ep.last_delivery_at = datetime.now(datetime.UTC).isoformat()
                     ep.last_status_code = resp.status_code
                     if not resp.is_success:
                         ep.failed_deliveries += 1
@@ -372,4 +372,4 @@ def enqueue_human_review_task(
 
     except Exception as exc:
         logger.error("enqueue_human_review_task_error", video_id=video_id, error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc

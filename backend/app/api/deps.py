@@ -28,8 +28,8 @@ async def get_current_user(
 
     try:
         payload = decode_token(credentials.credentials)
-    except JWTError:
-        raise UnauthorizedError("Invalid or expired token.")
+    except JWTError as exc:
+        raise UnauthorizedError("Invalid or expired token.") from exc
 
     if payload.get("type") != "access":
         raise UnauthorizedError("Invalid token type.")
@@ -40,8 +40,8 @@ async def get_current_user(
 
     try:
         user_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise UnauthorizedError("Invalid token subject.")
+    except ValueError as exc:
+        raise UnauthorizedError("Invalid token subject.") from exc
 
     result = await db.execute(select(User).where(User.id == user_uuid, User.is_active == True))
     user = result.scalar_one_or_none()

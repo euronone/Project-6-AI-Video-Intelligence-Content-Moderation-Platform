@@ -12,7 +12,7 @@ Public entry points:
 from __future__ import annotations
 
 import json
-from datetime import datetime, date, timedelta, timezone
+from datetime import date, datetime, timedelta
 from typing import Any
 
 import structlog
@@ -109,7 +109,7 @@ def aggregate_daily_stats_task(
 
     except Exception as exc:
         logger.error("aggregate_daily_stats_error", date=target_date, error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 # ── W-04-B: Policy effectiveness ──────────────────────────────────────────────
@@ -176,7 +176,7 @@ def compute_policy_effectiveness_task(
 
     except Exception as exc:
         logger.error("compute_policy_effectiveness_error", policy_id=policy_id, error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 # ── W-04-C: Flush buffered events ─────────────────────────────────────────────
@@ -233,7 +233,7 @@ def flush_analytics_events_task(self) -> dict[str, Any]:
                         confidence=data.get("confidence"),
                         extra=json.dumps(data.get("extra")) if data.get("extra") else None,
                         event_date=data.get(
-                            "event_date", datetime.now(timezone.utc).date().isoformat()
+                            "event_date", datetime.now(datetime.UTC).date().isoformat()
                         ),
                     )
                 )
@@ -248,7 +248,7 @@ def flush_analytics_events_task(self) -> dict[str, Any]:
 
     except Exception as exc:
         logger.error("flush_analytics_events_error", error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
     logger.info("flush_analytics_events_done", flushed=flushed, errors=errors)
     return {"flushed": flushed, "errors": errors}

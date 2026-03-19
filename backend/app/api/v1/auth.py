@@ -1,6 +1,8 @@
+import uuid
 from datetime import timedelta
 from typing import Annotated
 
+import redis.asyncio as aioredis
 import structlog
 from fastapi import APIRouter, Depends, status
 from jose import JWTError
@@ -29,8 +31,6 @@ from app.schemas.auth import (
     TokenPair,
 )
 from app.schemas.user import UserResponse
-
-import redis.asyncio as aioredis
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = structlog.get_logger(__name__)
@@ -130,8 +130,8 @@ async def refresh(
 ) -> TokenPair:
     try:
         payload = decode_token(body.refresh_token)
-    except JWTError:
-        raise UnauthorizedError("Invalid or expired refresh token.")
+    except JWTError as exc:
+        raise UnauthorizedError("Invalid or expired refresh token.") from exc
 
     if payload.get("type") != "refresh":
         raise UnauthorizedError("Invalid token type.")
@@ -141,9 +141,8 @@ async def refresh(
     if not stored_user_id:
         raise UnauthorizedError("Refresh token has been revoked or expired.")
 
-    import uuid as _uuid
     result = await db.execute(
-        select(User).where(User.id == _uuid.UUID(stored_user_id), User.is_active == True)
+        select(User).where(User.id == uuid.UUID(stored_user_id), User.is_active == True)
     )
     user = result.scalar_one_or_none()
     if user is None:

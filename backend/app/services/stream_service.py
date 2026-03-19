@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 import structlog
@@ -156,7 +156,7 @@ class StreamService:
             raise NotFoundError("LiveStream", str(stream_id))
 
         stream.status = StreamStatus.STOPPED
-        stream.stopped_at = datetime.now(timezone.utc).isoformat()
+        stream.stopped_at = datetime.now(datetime.UTC).isoformat()
 
         await self.broadcast_event(stream_id, "stream.stopped", {"stream_id": str(stream_id)})
         logger.info("stream_stopped", stream_id=str(stream_id))

@@ -2,13 +2,16 @@
 Live Stream API — B-05
 Stream registration, management, and real-time WebSocket events.
 """
+import contextlib
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Annotated
 
+import redis.asyncio as aioredis
 import structlog
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect, status
+from jose import JWTError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,9 +22,6 @@ from app.core.security import decode_token
 from app.dependencies import get_db, get_redis
 from app.models.alert import LiveStream, StreamStatus
 from app.schemas.live import MessageResponse, StreamCreate, StreamListResponse, StreamResponse
-
-import redis.asyncio as aioredis
-from jose import JWTError
 
 router = APIRouter(prefix="/live", tags=["live"])
 logger = structlog.get_logger(__name__)
@@ -126,17 +126,15 @@ async def stop_stream(
         raise NotFoundError("LiveStream", str(stream_id))
 
     stream.status = StreamStatus.STOPPED
-    stream.stopped_at = datetime.now(timezone.utc).isoformat()
+    stream.stopped_at = datetime.now(datetime.UTC).isoformat()
 
     # Notify connected WebSocket clients
     sid = str(stream_id)
     if sid in _ws_connections:
         payload = json.dumps({"event": "stream.stopped", "stream_id": sid})
         for ws in _ws_connections[sid]:
-            try:
+            with contextlib.suppress(Exception):
                 await ws.send_text(payload)
-            except Exception:
-                pass
 
     logger.info("stream_stopped", stream_id=str(stream_id))
     return MessageResponse(message="Stream stopped successfully.")
@@ -183,7 +181,5 @@ async def websocket_stream(
         logger.info("ws_client_disconnected", stream_id=sid)
     finally:
         if sid in _ws_connections:
-            try:
+            with contextlib.suppress(ValueError):
                 _ws_connections[sid].remove(websocket)
-            except ValueError:
-                pass

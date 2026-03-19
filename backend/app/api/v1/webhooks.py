@@ -6,7 +6,7 @@ import hashlib
 import hmac
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Annotated
 
 import httpx
@@ -184,7 +184,7 @@ async def test_webhook(
 
     payload_dict = {
         "event": "test",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(datetime.UTC).isoformat(),
         "endpoint_id": str(endpoint_id),
     }
     payload_bytes = json.dumps(payload_dict).encode()
@@ -198,7 +198,7 @@ async def test_webhook(
             response = await http.post(endpoint.url, content=payload_bytes, headers=headers)
 
         endpoint.total_deliveries += 1
-        endpoint.last_delivery_at = datetime.now(timezone.utc).isoformat()
+        endpoint.last_delivery_at = datetime.now(datetime.UTC).isoformat()
         endpoint.last_status_code = response.status_code
         if response.status_code >= 400:
             endpoint.failed_deliveries += 1

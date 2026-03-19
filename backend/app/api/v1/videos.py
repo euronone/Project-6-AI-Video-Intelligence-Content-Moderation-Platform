@@ -4,6 +4,7 @@ CRUD, upload URL generation, and status polling for videos.
 """
 import json
 import uuid
+from datetime import datetime
 from typing import Annotated
 
 import structlog
@@ -241,8 +242,6 @@ async def delete_video(
     current_user: OperatorUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
-    from datetime import datetime, timezone
-
     result = await db.execute(
         select(Video).where(Video.id == video_id, Video.deleted_at.is_(None))
     )
@@ -250,7 +249,7 @@ async def delete_video(
     if not video:
         raise NotFoundError("Video", str(video_id))
 
-    video.deleted_at = datetime.now(timezone.utc).isoformat()
+    video.deleted_at = datetime.now(datetime.UTC).isoformat()
     video.status = VideoStatus.DELETED
     # Stub: enqueue S3 cleanup — cleanup_tasks.delete_video_artifacts.delay(str(video_id))
     logger.info("video_soft_deleted", video_id=str(video_id))

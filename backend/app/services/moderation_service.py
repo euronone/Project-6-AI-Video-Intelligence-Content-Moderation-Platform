@@ -14,7 +14,7 @@ Public API:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 import structlog
@@ -160,7 +160,7 @@ class ModerationService:
         moderation.reviewed_by = reviewer_id
         moderation.review_action = body.action
         moderation.review_notes = body.notes
-        moderation.reviewed_at = datetime.now(timezone.utc).isoformat()
+        moderation.reviewed_at = datetime.now(datetime.UTC).isoformat()
 
         # Mirror status on the linked queue item
         queue_result = await self._db.execute(
@@ -206,7 +206,7 @@ class ModerationService:
 
         moderation.override_by = admin_id
         moderation.override_decision = body.decision
-        moderation.override_at = datetime.now(timezone.utc).isoformat()
+        moderation.override_at = datetime.now(datetime.UTC).isoformat()
 
         logger.info(
             "decision_overridden",

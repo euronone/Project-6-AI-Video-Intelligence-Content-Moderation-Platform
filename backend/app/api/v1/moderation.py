@@ -3,7 +3,7 @@ Moderation API — B-03
 Queue management, AI result retrieval, human review, and admin override.
 """
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Annotated
 
 import structlog
@@ -138,7 +138,7 @@ async def submit_review(
     moderation.reviewed_by = current_user.id
     moderation.review_action = body.action
     moderation.review_notes = body.notes
-    moderation.reviewed_at = datetime.now(timezone.utc).isoformat()
+    moderation.reviewed_at = datetime.now(datetime.UTC).isoformat()
 
     # Update queue item status too
     queue_result = await db.execute(
@@ -182,7 +182,7 @@ async def override_decision(
 
     moderation.override_by = current_user.id
     moderation.override_decision = body.decision
-    moderation.override_at = datetime.now(timezone.utc).isoformat()
+    moderation.override_at = datetime.now(datetime.UTC).isoformat()
 
     logger.info(
         "decision_overridden",
