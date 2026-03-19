@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Radio, StopCircle, ArrowRight } from 'lucide-react';
+import { Plus, Radio, StopCircle, ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,6 +20,7 @@ interface StreamMonitorProps {
   streams: StreamSummary[];
   onStop?: (id: string) => void;
   isLoading?: boolean;
+  onAddStream?: () => void;
 }
 
 const statusVariant: Record<StreamSummary['status'], 'destructive' | 'secondary' | 'warning' | 'success'> = {
@@ -29,7 +30,7 @@ const statusVariant: Record<StreamSummary['status'], 'destructive' | 'secondary'
   error: 'destructive',
 };
 
-export function StreamMonitor({ streams, onStop, isLoading }: StreamMonitorProps) {
+export function StreamMonitor({ streams, onStop, isLoading, onAddStream }: StreamMonitorProps) {
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -42,7 +43,19 @@ export function StreamMonitor({ streams, onStop, isLoading }: StreamMonitorProps
 
   if (streams.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">No active streams.</p>
+      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+        <Radio className="mb-3 h-8 w-8 text-muted-foreground" />
+        <p className="font-medium">No streams yet</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Add a stream source to start AI-powered live monitoring.
+        </p>
+        {onAddStream && (
+          <Button className="mt-4" onClick={onAddStream}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Stream
+          </Button>
+        )}
+      </div>
     );
   }
 

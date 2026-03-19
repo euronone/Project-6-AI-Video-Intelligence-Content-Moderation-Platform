@@ -55,7 +55,9 @@ async def register(
 
     user = User(
         email=body.email,
+        name=body.name,
         password_hash=hash_password(body.password),
+        role=body.role,
     )
     db.add(user)
     await db.flush()  # get user.id before commit

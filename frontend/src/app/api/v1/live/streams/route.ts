@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 
+// In-memory store — persists for the lifetime of the dev server process
 const MOCK_STREAMS = [
   {
     id: 'stream-001',
@@ -31,9 +32,19 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => ({}));
-  return NextResponse.json(
-    { data: { stream_id: 'stream-' + Date.now(), ...body } },
-    { status: 201 }
-  );
+  const body = await request.json().catch(() => ({})) as Record<string, unknown>;
+
+  const newStream = {
+    id: 'stream-' + Date.now(),
+    title: (body.title as string) || 'Untitled Stream',
+    stream_url: (body.stream_url as string) || '',
+    description: (body.description as string) || '',
+    status: 'active' as const,
+    alert_count: 0,
+    created_at: new Date().toISOString(),
+  };
+
+  MOCK_STREAMS.unshift(newStream);
+
+  return NextResponse.json({ data: newStream }, { status: 201 });
 }

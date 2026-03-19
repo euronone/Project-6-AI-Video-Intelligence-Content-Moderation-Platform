@@ -56,11 +56,15 @@ export function Sidebar({ className }: SidebarProps) {
         className
       )}
     >
-      {/* Logo */}
-      <div className="flex h-16 items-center gap-2 px-6">
+      {/* Logo — click to go home */}
+      <Link
+        href={ROUTES.dashboard}
+        className="flex h-16 items-center gap-2 px-6 hover:opacity-80 transition-opacity"
+        aria-label="Go to dashboard home"
+      >
         <Shield className="h-6 w-6 text-primary" />
         <span className="text-lg font-semibold tracking-tight">VidShield AI</span>
-      </div>
+      </Link>
 
       <Separator className="bg-sidebar-border" />
 

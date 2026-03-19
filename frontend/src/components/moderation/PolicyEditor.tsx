@@ -35,9 +35,9 @@ const ruleSchema = z.object({
 const policySchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   description: z.string().max(500).optional(),
-  categories: z.array(z.string()).min(1, 'Select at least one category'),
+  categories: z.array(z.enum(['violence', 'nudity', 'drugs', 'hate_symbols', 'spam', 'misinformation', 'other'])).min(1, 'Select at least one category'),
   rules: z.array(ruleSchema),
-  actions: z.array(z.string()),
+  actions: z.array(z.enum(['auto_flag', 'auto_reject', 'escalate', 'notify'])),
   is_active: z.boolean(),
 });
 
@@ -87,14 +87,14 @@ export function PolicyEditor({ policy, onSubmit, onCancel, isSubmitting }: Polic
   const selectedCategories = watch('categories');
   const selectedActions = watch('actions');
 
-  const toggleCategory = (cat: string) => {
+  const toggleCategory = (cat: ViolationCategory) => {
     const next = selectedCategories.includes(cat)
       ? selectedCategories.filter((c) => c !== cat)
       : [...selectedCategories, cat];
     setValue('categories', next, { shouldValidate: true });
   };
 
-  const toggleAction = (action: string) => {
+  const toggleAction = (action: PolicyAction) => {
     const next = selectedActions.includes(action)
       ? selectedActions.filter((a) => a !== action)
       : [...selectedActions, action];

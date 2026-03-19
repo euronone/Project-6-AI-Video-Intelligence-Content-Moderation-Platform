@@ -14,8 +14,8 @@ export function useAuth() {
     router.push(ROUTES.dashboard);
   };
 
-  const handleRegister = async (email: string, password: string, name: string) => {
-    await register(email, password, name);
+  const handleRegister = async (email: string, password: string, name: string, role: 'admin' | 'operator') => {
+    await register(email, password, name, role);
     router.push(ROUTES.login);
   };
 
