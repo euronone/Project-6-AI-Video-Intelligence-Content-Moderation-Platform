@@ -44,7 +44,7 @@ from typing import Any, Literal
 import structlog
 from langgraph.graph import END, StateGraph
 from pydantic import BaseModel
-from typing_extensions import Annotated, TypedDict
+from typing import Annotated, TypedDict
 
 from app.ai.chains.moderation_chain import (
     ModerationChainOutput,
