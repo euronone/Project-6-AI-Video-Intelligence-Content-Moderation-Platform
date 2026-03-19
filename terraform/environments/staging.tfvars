@@ -14,14 +14,14 @@ private_subnet_cidrs = ["10.1.11.0/24", "10.1.12.0/24"]
 single_nat_gateway   = true # still cost-optimised
 
 # ECS sizing — staging scale
-api_cpu              = 512
-api_memory           = 1024
-api_desired_count    = 1
-worker_cpu           = 1024
-worker_memory        = 2048
-worker_desired_count = 1
-frontend_cpu         = 256
-frontend_memory      = 512
+api_cpu                = 512
+api_memory             = 1024
+api_desired_count      = 1
+worker_cpu             = 1024
+worker_memory          = 2048
+worker_desired_count   = 1
+frontend_cpu           = 256
+frontend_memory        = 512
 frontend_desired_count = 1
 
 # RDS — medium, single-AZ, 7-day backups

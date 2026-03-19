@@ -15,14 +15,14 @@ private_subnet_cidrs = ["10.2.11.0/24", "10.2.12.0/24"]
 single_nat_gateway   = false # one NAT GW per AZ for high availability
 
 # ECS sizing — production scale
-api_cpu              = 1024
-api_memory           = 2048
-api_desired_count    = 2
-worker_cpu           = 2048
-worker_memory        = 4096
-worker_desired_count = 2
-frontend_cpu         = 512
-frontend_memory      = 1024
+api_cpu                = 1024
+api_memory             = 2048
+api_desired_count      = 2
+worker_cpu             = 2048
+worker_memory          = 4096
+worker_desired_count   = 2
+frontend_cpu           = 512
+frontend_memory        = 1024
 frontend_desired_count = 2
 
 # RDS — production grade: Multi-AZ, deletion protection, 30-day backups

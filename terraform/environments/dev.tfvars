@@ -14,14 +14,14 @@ private_subnet_cidrs = ["10.0.11.0/24", "10.0.12.0/24"]
 single_nat_gateway   = true # one NAT GW to save cost in dev
 
 # ECS sizing — minimum viable
-api_cpu              = 256
-api_memory           = 512
-api_desired_count    = 1
-worker_cpu           = 512
-worker_memory        = 1024
-worker_desired_count = 1
-frontend_cpu         = 256
-frontend_memory      = 512
+api_cpu                = 256
+api_memory             = 512
+api_desired_count      = 1
+worker_cpu             = 512
+worker_memory          = 1024
+worker_desired_count   = 1
+frontend_cpu           = 256
+frontend_memory        = 512
 frontend_desired_count = 1
 
 # RDS — smallest instance, single-AZ, no deletion protection
