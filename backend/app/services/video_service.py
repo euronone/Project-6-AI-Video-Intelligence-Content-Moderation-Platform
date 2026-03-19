@@ -14,6 +14,7 @@ Public API:
     await service.update_video(video_id, owner_id, body)                  -> VideoResponse
     await service.delete_video(video_id, operator_id)                     -> None
 """
+
 from __future__ import annotations
 
 import json

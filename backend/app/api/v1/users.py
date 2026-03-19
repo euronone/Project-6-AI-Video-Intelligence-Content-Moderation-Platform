@@ -6,8 +6,9 @@ POST   /users          create a user
 PATCH  /users/{id}     update name / role / password / is_active
 DELETE /users/{id}     remove a user (cannot remove yourself)
 """
-from typing import Annotated
+
 import uuid
+from typing import Annotated
 
 import structlog
 from fastapi import APIRouter, Depends, status

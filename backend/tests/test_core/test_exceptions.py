@@ -1,4 +1,5 @@
 """Tests for app.core.exceptions — error envelope shape and HTTP status codes."""
+
 import json
 from unittest.mock import MagicMock
 

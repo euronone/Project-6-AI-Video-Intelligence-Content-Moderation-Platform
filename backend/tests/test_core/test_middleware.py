@@ -1,5 +1,7 @@
 """Tests for app.core.middleware — request context and response wrapping."""
+
 import json
+import uuid
 
 import pytest
 from fastapi import FastAPI
@@ -54,7 +56,6 @@ async def test_request_id_header_present(ac: AsyncClient):
 
 @pytest.mark.anyio
 async def test_request_id_is_uuid_format(ac: AsyncClient):
-    import uuid
     r = await ac.get("/simple")
     uid = r.headers["x-request-id"]
     uuid.UUID(uid)  # raises ValueError if not a valid UUID

@@ -16,6 +16,7 @@ Task execution order for a full pipeline run:
 Public entry point:
     process_video.delay(video_id="...", s3_key="videos/abc.mp4")
 """
+
 from __future__ import annotations
 
 import asyncio

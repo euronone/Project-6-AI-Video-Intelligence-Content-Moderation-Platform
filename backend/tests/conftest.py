@@ -4,6 +4,7 @@ Shared test fixtures.
 Uses an in-memory SQLite database (via aiosqlite) so tests run without a
 running PostgreSQL or Redis instance. Redis is mocked via fakeredis.
 """
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
