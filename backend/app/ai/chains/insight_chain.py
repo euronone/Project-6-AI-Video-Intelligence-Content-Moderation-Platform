@@ -21,7 +21,6 @@ Public API:
 from __future__ import annotations
 
 import json
-from typing import Any
 
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage

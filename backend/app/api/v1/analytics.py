@@ -2,10 +2,10 @@
 Analytics API — B-04
 Summary metrics, violation time-series, and CSV export.
 """
-import json
 from datetime import date, timedelta
 from typing import Annotated
 
+import redis.asyncio as aioredis
 import structlog
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
@@ -13,7 +13,6 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser
-from app.config import settings
 from app.dependencies import get_db, get_redis
 from app.models.analytics import AnalyticsEvent, EventType
 from app.schemas.analytics import (
@@ -22,8 +21,6 @@ from app.schemas.analytics import (
     ViolationDataPoint,
     ViolationsResponse,
 )
-
-import redis.asyncio as aioredis
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 logger = structlog.get_logger(__name__)
@@ -111,8 +108,8 @@ async def get_summary(
 async def get_violations(
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    date_from: date = Query(default_factory=lambda: date.today() - timedelta(days=30)),
-    date_to: date = Query(default_factory=date.today),
+    date_from: date = Query(default_factory=lambda: date.today() - timedelta(days=30)),  # noqa: B008
+    date_to: date = Query(default_factory=date.today),  # noqa: B008
 ) -> ViolationsResponse:
     from_str = date_from.isoformat()
     to_str = date_to.isoformat()
@@ -174,8 +171,8 @@ async def get_violations(
 async def export_analytics(
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    date_from: date = Query(default_factory=lambda: date.today() - timedelta(days=30)),
-    date_to: date = Query(default_factory=date.today),
+    date_from: date = Query(default_factory=lambda: date.today() - timedelta(days=30)),  # noqa: B008
+    date_to: date = Query(default_factory=date.today),  # noqa: B008
 ) -> StreamingResponse:
     from_str = date_from.isoformat()
     to_str = date_to.isoformat()

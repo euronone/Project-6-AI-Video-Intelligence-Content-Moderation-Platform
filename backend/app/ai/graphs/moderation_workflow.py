@@ -39,12 +39,11 @@ Public API:
 from __future__ import annotations
 
 import operator
-from typing import Any, Literal
+from typing import Annotated, Any, Literal, TypedDict
 
 import structlog
 from langgraph.graph import END, StateGraph
 from pydantic import BaseModel
-from typing import Annotated, TypedDict
 
 from app.ai.chains.moderation_chain import (
     ModerationChainOutput,

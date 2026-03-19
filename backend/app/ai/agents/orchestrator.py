@@ -113,7 +113,7 @@ class OrchestratorAgent(BaseAgent):
                 stderr=asyncio.subprocess.PIPE,
             )
             stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=60)
-        except (FileNotFoundError, asyncio.TimeoutError):
+        except (FileNotFoundError, TimeoutError):
             # FFmpeg not available (test env) — return placeholders
             return self._placeholder_frames(_TARGET_FRAMES)
 

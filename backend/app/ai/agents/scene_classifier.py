@@ -14,7 +14,6 @@ import structlog
 from app.ai.base import BaseAgent
 from app.ai.prompts.moderation_prompts import SCENE_CLASSIFY_SYSTEM
 from app.ai.schemas import SceneCategory, SceneClassification
-from app.config import settings
 
 logger = structlog.get_logger(__name__)
 
@@ -81,7 +80,7 @@ class SceneClassifierAgent(BaseAgent):
         import asyncio
         tasks = [
             self._classify_frame(frame, ts, start_index + i, video_id)
-            for i, (frame, ts) in enumerate(zip(frames, timestamps))
+            for i, (frame, ts) in enumerate(zip(frames, timestamps, strict=True))
         ]
         return await asyncio.gather(*tasks)
 

@@ -10,8 +10,7 @@ Annotated with a reducer so LangGraph can merge concurrent writes.
 from __future__ import annotations
 
 import operator
-from typing import Any
-from typing import Annotated, TypedDict
+from typing import Annotated, Any, TypedDict
 
 
 class VideoAnalysisState(TypedDict, total=False):
