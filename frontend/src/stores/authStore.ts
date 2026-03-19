@@ -13,7 +13,7 @@ interface AuthState {
 
 interface AuthActions {
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  register: (email: string, password: string, name: string, role: 'admin' | 'operator') => Promise<void>;
   logout: () => void;
   clearError: () => void;
   setUser: (user: User) => void;
@@ -49,10 +49,10 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         }
       },
 
-      register: async (email, password, name) => {
+      register: async (email, password, name, role) => {
         set({ isLoading: true, error: null });
         try {
-          await apiClient.post('/auth/register', { email, password, name });
+          await apiClient.post('/auth/register', { email, password, name, role });
           set({ isLoading: false });
         } catch (err: unknown) {
           const message =
