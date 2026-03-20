@@ -14,6 +14,7 @@ Public API:
     result.frame_detections  # list[list[str]] per-frame object lists
     result.error             # str | None      set on failure; pipeline continues
 """
+
 from __future__ import annotations
 
 import json
@@ -47,6 +48,7 @@ No markdown, no extra text.
 
 # ── Output schema ─────────────────────────────────────────────────────────────
 
+
 class ObjectDetectionResult(BaseModel):
     objects: list[str] = Field(
         default_factory=list,
@@ -60,6 +62,7 @@ class ObjectDetectionResult(BaseModel):
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
+
 
 async def detect_objects(
     frames: list[str],
@@ -88,20 +91,24 @@ async def detect_objects(
 
     content: list[dict] = []
     for frame_b64 in frames_to_process:
-        content.append({
-            "type": "image_url",
-            "image_url": {
-                "url": f"data:image/jpeg;base64,{frame_b64}",
-                "detail": "low",
-            },
-        })
-    content.append({
-        "type": "text",
-        "text": (
-            f"Detect all objects in these {len(frames_to_process)} frame(s). "
-            "Return only the JSON object."
-        ),
-    })
+        content.append(
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{frame_b64}",
+                    "detail": "low",
+                },
+            }
+        )
+    content.append(
+        {
+            "type": "text",
+            "text": (
+                f"Detect all objects in these {len(frames_to_process)} frame(s). "
+                "Return only the JSON object."
+            ),
+        }
+    )
 
     logger.info("object_detector_start", frame_count=len(frames_to_process))
 

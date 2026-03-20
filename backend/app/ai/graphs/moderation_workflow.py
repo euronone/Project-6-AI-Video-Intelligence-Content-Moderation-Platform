@@ -36,15 +36,15 @@ Public API:
     result.escalated           # bool
     result.recommended_action  # str
 """
+
 from __future__ import annotations
 
 import operator
-from typing import Any, Literal
+from typing import Annotated, Any, Literal, TypedDict
 
 import structlog
 from langgraph.graph import END, StateGraph
 from pydantic import BaseModel
-from typing_extensions import Annotated, TypedDict
 
 from app.ai.chains.moderation_chain import (
     ModerationChainOutput,
@@ -58,6 +58,7 @@ _DEFAULT_CONFIDENCE_THRESHOLD = 0.6
 
 # ── State ─────────────────────────────────────────────────────────────────────
 
+
 class ModerationWorkflowState(TypedDict, total=False):
     # ── Input ─────────────────────────────────────────────────────────────────
     video_id: str
@@ -69,12 +70,12 @@ class ModerationWorkflowState(TypedDict, total=False):
     confidence_threshold: float
 
     # ── Chain output ──────────────────────────────────────────────────────────
-    chain_output: dict[str, Any]         # ModerationChainOutput.model_dump()
+    chain_output: dict[str, Any]  # ModerationChainOutput.model_dump()
 
     # ── Workflow control ──────────────────────────────────────────────────────
     escalated: bool
-    final_decision: str                  # ModerationDecision value
-    final_severity: str                  # ViolationSeverity value
+    final_decision: str  # ModerationDecision value
+    final_severity: str  # ViolationSeverity value
     final_confidence: float
     final_reasoning: str
     final_recommended_action: str
@@ -84,6 +85,7 @@ class ModerationWorkflowState(TypedDict, total=False):
 
 
 # ── Output schema ─────────────────────────────────────────────────────────────
+
 
 class ModerationWorkflowResult(BaseModel):
     video_id: str
@@ -98,10 +100,11 @@ class ModerationWorkflowResult(BaseModel):
 
 # ── Injectable chain (allows test mocking) ────────────────────────────────────
 
-_chain_fn = run_moderation_chain   # can be replaced in tests
+_chain_fn = run_moderation_chain  # can be replaced in tests
 
 
 # ── Node functions ────────────────────────────────────────────────────────────
+
 
 async def load_context_node(state: ModerationWorkflowState) -> dict[str, Any]:
     """Validate required fields and set defaults."""
@@ -194,12 +197,8 @@ async def escalate_node(state: ModerationWorkflowState) -> dict[str, Any]:
 
 
 async def finalize_node(state: ModerationWorkflowState) -> dict[str, Any]:
-    """Accept the chain decision as-is."""
+    """Accept the chain decision as-is (only reached on the high-confidence path)."""
     chain_out = state.get("chain_output") or {}
-
-    # If escalate_node already ran, don't overwrite its output
-    if state.get("escalated") and state.get("final_decision"):
-        return {}
 
     return {
         "final_decision": chain_out.get("decision", ModerationDecision.NEEDS_REVIEW.value),
@@ -211,6 +210,7 @@ async def finalize_node(state: ModerationWorkflowState) -> dict[str, Any]:
 
 
 # ── Build graph ───────────────────────────────────────────────────────────────
+
 
 def _build_workflow() -> Any:
     graph = StateGraph(ModerationWorkflowState)
@@ -229,7 +229,7 @@ def _build_workflow() -> Any:
         _route_after_confidence,
         {"escalate": "escalate", "finalize": "finalize"},
     )
-    graph.add_edge("escalate", "finalize")
+    graph.add_edge("escalate", END)
     graph.add_edge("finalize", END)
 
     return graph.compile()
@@ -239,6 +239,7 @@ _compiled_workflow = _build_workflow()
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
+
 
 async def run_moderation_workflow(
     video_id: str,

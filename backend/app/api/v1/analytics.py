@@ -2,10 +2,11 @@
 Analytics API — B-04
 Summary metrics, violation time-series, and CSV export.
 """
-import json
+
 from datetime import date, timedelta
 from typing import Annotated
 
+import redis.asyncio as aioredis
 import structlog
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
@@ -13,7 +14,6 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser
-from app.config import settings
 from app.dependencies import get_db, get_redis
 from app.models.analytics import AnalyticsEvent, EventType
 from app.schemas.analytics import (
@@ -22,8 +22,6 @@ from app.schemas.analytics import (
     ViolationDataPoint,
     ViolationsResponse,
 )
-
-import redis.asyncio as aioredis
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 logger = structlog.get_logger(__name__)
@@ -36,6 +34,7 @@ def _cache_key(tenant_id: str | None) -> str:
 
 
 # ── GET /analytics/summary ────────────────────────────────────────────────────
+
 
 @router.get(
     "/summary",
@@ -57,17 +56,23 @@ async def get_summary(
     if current_user.tenant_id:
         base = base.where(AnalyticsEvent.tenant_id == current_user.tenant_id)
 
-    processed_count = await db.scalar(
-        select(func.count()).select_from(
-            base.where(AnalyticsEvent.event_type == EventType.VIDEO_PROCESSED).subquery()
+    processed_count = (
+        await db.scalar(
+            select(func.count()).select_from(
+                base.where(AnalyticsEvent.event_type == EventType.VIDEO_PROCESSED).subquery()
+            )
         )
-    ) or 0
+        or 0
+    )
 
-    violations_count = await db.scalar(
-        select(func.count()).select_from(
-            base.where(AnalyticsEvent.event_type == EventType.VIOLATION_DETECTED).subquery()
+    violations_count = (
+        await db.scalar(
+            select(func.count()).select_from(
+                base.where(AnalyticsEvent.event_type == EventType.VIOLATION_DETECTED).subquery()
+            )
         )
-    ) or 0
+        or 0
+    )
 
     violation_rate = round(
         (violations_count / processed_count * 100) if processed_count else 0.0, 2
@@ -82,8 +87,7 @@ async def get_summary(
         .limit(5)
     )
     top_categories = [
-        {"category": row.category or "unknown", "count": row.cnt}
-        for row in cat_result
+        {"category": row.category or "unknown", "count": row.cnt} for row in cat_result
     ]
 
     summary = AnalyticsSummary(
@@ -103,6 +107,7 @@ async def get_summary(
 
 # ── GET /analytics/violations ─────────────────────────────────────────────────
 
+
 @router.get(
     "/violations",
     response_model=ViolationsResponse,
@@ -111,8 +116,8 @@ async def get_summary(
 async def get_violations(
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    date_from: date = Query(default_factory=lambda: date.today() - timedelta(days=30)),
-    date_to: date = Query(default_factory=date.today),
+    date_from: date = Query(default_factory=lambda: date.today() - timedelta(days=30)),  # noqa: B008
+    date_to: date = Query(default_factory=date.today),  # noqa: B008
 ) -> ViolationsResponse:
     from_str = date_from.isoformat()
     to_str = date_to.isoformat()
@@ -132,9 +137,7 @@ async def get_violations(
         .group_by(AnalyticsEvent.event_date)
         .order_by(AnalyticsEvent.event_date)
     )
-    time_series = [
-        ViolationDataPoint(date=row.event_date, count=row.cnt) for row in ts_result
-    ]
+    time_series = [ViolationDataPoint(date=row.event_date, count=row.cnt) for row in ts_result]
 
     # Category breakdown
     cat_result = await db.execute(
@@ -166,6 +169,7 @@ async def get_violations(
 
 # ── GET /analytics/export ─────────────────────────────────────────────────────
 
+
 @router.get(
     "/export",
     summary="Export violation analytics as CSV",
@@ -174,8 +178,8 @@ async def get_violations(
 async def export_analytics(
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    date_from: date = Query(default_factory=lambda: date.today() - timedelta(days=30)),
-    date_to: date = Query(default_factory=date.today),
+    date_from: date = Query(default_factory=lambda: date.today() - timedelta(days=30)),  # noqa: B008
+    date_to: date = Query(default_factory=date.today),  # noqa: B008
 ) -> StreamingResponse:
     from_str = date_from.isoformat()
     to_str = date_to.isoformat()
@@ -201,5 +205,7 @@ async def export_analytics(
     return StreamingResponse(
         _generate(),
         media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="violations_{from_str}_{to_str}.csv"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="violations_{from_str}_{to_str}.csv"'
+        },
     )

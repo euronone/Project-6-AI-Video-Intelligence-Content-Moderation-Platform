@@ -1,4 +1,5 @@
 """Tests for T-02 AudioTranscriber — FFmpeg subprocess and OpenAI Whisper mocked."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -8,13 +9,12 @@ import pytest
 from app.ai.tools.audio_transcriber import (
     AudioTranscriptionError,
     TranscriptResult,
-    TranscriptSegment,
     _extract_audio_ffmpeg,
     transcribe_audio,
 )
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _mock_whisper_response(
     text: str = "Hello world.",
@@ -30,13 +30,12 @@ def _mock_whisper_response(
 
 def _mock_openai_client(response: MagicMock | None = None, side_effect=None) -> MagicMock:
     client = MagicMock()
-    client.audio.transcriptions.create = AsyncMock(
-        return_value=response, side_effect=side_effect
-    )
+    client.audio.transcriptions.create = AsyncMock(return_value=response, side_effect=side_effect)
     return client
 
 
 # ── _extract_audio_ffmpeg ─────────────────────────────────────────────────────
+
 
 @patch("app.ai.tools.audio_transcriber.subprocess.run")
 def test_extract_audio_ffmpeg_success(mock_run):
@@ -58,14 +57,13 @@ def test_extract_audio_ffmpeg_nonzero_exit_raises(mock_run):
 
 # ── transcribe_audio ──────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 @patch("app.ai.tools.audio_transcriber._extract_audio_ffmpeg")
 @patch("app.ai.tools.audio_transcriber.os.path.exists", return_value=True)
 @patch("app.ai.tools.audio_transcriber.os.unlink")
 @patch("builtins.open", new_callable=MagicMock)
-async def test_transcribe_audio_happy_path(
-    mock_open, mock_unlink, mock_exists, mock_ffmpeg
-):
+async def test_transcribe_audio_happy_path(mock_open, mock_unlink, mock_exists, mock_ffmpeg):
     mock_ffmpeg.return_value = None  # success
     mock_open.return_value.__enter__ = lambda s: s
     mock_open.return_value.__exit__ = MagicMock(return_value=False)
@@ -93,9 +91,7 @@ async def test_transcribe_audio_happy_path(
 @patch("app.ai.tools.audio_transcriber._extract_audio_ffmpeg")
 @patch("app.ai.tools.audio_transcriber.os.path.exists", return_value=True)
 @patch("app.ai.tools.audio_transcriber.os.unlink")
-async def test_transcribe_audio_ffmpeg_failure_returns_empty(
-    mock_unlink, mock_exists, mock_ffmpeg
-):
+async def test_transcribe_audio_ffmpeg_failure_returns_empty(mock_unlink, mock_exists, mock_ffmpeg):
     mock_ffmpeg.side_effect = AudioTranscriptionError("no audio stream")
 
     result = await transcribe_audio("/no_audio.mp4", _client=MagicMock())

@@ -1,4 +1,5 @@
 """Tests for /api/v1/videos endpoints."""
+
 import pytest
 from httpx import AsyncClient
 
@@ -7,6 +8,7 @@ UPLOAD_URL_ENDPOINT = "/api/v1/videos/upload-url"
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 async def _get_token(client: AsyncClient) -> str:
     resp = await client.post(
@@ -26,6 +28,7 @@ async def _create_video(client: AsyncClient, token: str, title: str = "Test Vide
 
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_list_videos_empty(client: AsyncClient) -> None:

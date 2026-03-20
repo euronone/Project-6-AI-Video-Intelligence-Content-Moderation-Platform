@@ -14,6 +14,7 @@ Public API:
 FastAPI dependency:
     get_storage_service() -> StorageService
 """
+
 from __future__ import annotations
 
 from typing import IO, Any
@@ -172,6 +173,7 @@ class StorageService:
 
 
 # ── FastAPI dependency ─────────────────────────────────────────────────────────
+
 
 def get_storage_service() -> StorageService:
     """FastAPI dependency that returns a configured StorageService instance."""

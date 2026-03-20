@@ -11,10 +11,11 @@ Public API:
     await service.override_decision(moderation_id, admin_id, body)      -> ModerationResultResponse
     await service.trigger_remoderation(video_id, policy_rules)          -> dict
 """
+
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -85,8 +86,9 @@ class ModerationService:
         total = count_result.scalar_one()
 
         result = await self._db.execute(
-            base_query
-            .order_by(ModerationQueueItem.priority.desc(), ModerationQueueItem.created_at.asc())
+            base_query.order_by(
+                ModerationQueueItem.priority.desc(), ModerationQueueItem.created_at.asc()
+            )
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
@@ -160,7 +162,7 @@ class ModerationService:
         moderation.reviewed_by = reviewer_id
         moderation.review_action = body.action
         moderation.review_notes = body.notes
-        moderation.reviewed_at = datetime.now(timezone.utc).isoformat()
+        moderation.reviewed_at = datetime.now(UTC).isoformat()
 
         # Mirror status on the linked queue item
         queue_result = await self._db.execute(
@@ -206,7 +208,7 @@ class ModerationService:
 
         moderation.override_by = admin_id
         moderation.override_decision = body.decision
-        moderation.override_at = datetime.now(timezone.utc).isoformat()
+        moderation.override_at = datetime.now(UTC).isoformat()
 
         logger.info(
             "decision_overridden",
@@ -245,6 +247,7 @@ class ModerationService:
         violations = moderation.violations or [] if moderation else []
 
         from app.workers.moderation_tasks import run_moderation_task
+
         task = run_moderation_task.delay(
             video_id=str(video_id),
             policy_rules=policy_rules or [],

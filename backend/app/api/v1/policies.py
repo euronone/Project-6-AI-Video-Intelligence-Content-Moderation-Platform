@@ -2,17 +2,18 @@
 Policies API — B-06
 CRUD for content moderation rule sets.
 """
+
 import uuid
 from typing import Annotated
 
+import redis.asyncio as aioredis
 import structlog
 from fastapi import APIRouter, Depends, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AdminUser, CurrentUser
-from app.config import settings
-from app.core.exceptions import ForbiddenError, NotFoundError, ValidationError
+from app.core.exceptions import NotFoundError, ValidationError
 from app.dependencies import get_db, get_redis
 from app.models.policy import Policy
 from app.schemas.policy import (
@@ -21,8 +22,6 @@ from app.schemas.policy import (
     PolicyResponse,
     PolicyUpdate,
 )
-
-import redis.asyncio as aioredis
 
 router = APIRouter(prefix="/policies", tags=["policies"])
 logger = structlog.get_logger(__name__)
@@ -33,6 +32,7 @@ def _policy_cache_key(tenant_id: str | None) -> str:
 
 
 # ── GET /policies ─────────────────────────────────────────────────────────────
+
 
 @router.get("", response_model=PolicyListResponse, summary="List all policies for the org")
 async def list_policies(
@@ -54,6 +54,7 @@ async def list_policies(
 
 
 # ── POST /policies ────────────────────────────────────────────────────────────
+
 
 @router.post(
     "",
@@ -89,6 +90,7 @@ async def create_policy(
 
 # ── GET /policies/{id} ────────────────────────────────────────────────────────
 
+
 @router.get("/{policy_id}", response_model=PolicyResponse, summary="Get policy detail")
 async def get_policy(
     policy_id: uuid.UUID,
@@ -103,6 +105,7 @@ async def get_policy(
 
 
 # ── PUT /policies/{id} ────────────────────────────────────────────────────────
+
 
 @router.put("/{policy_id}", response_model=PolicyResponse, summary="Update a moderation policy")
 async def update_policy(
@@ -136,6 +139,7 @@ async def update_policy(
 
 
 # ── DELETE /policies/{id} ─────────────────────────────────────────────────────
+
 
 @router.delete(
     "/{policy_id}",

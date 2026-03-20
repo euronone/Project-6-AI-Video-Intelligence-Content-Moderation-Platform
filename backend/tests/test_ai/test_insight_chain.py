@@ -1,4 +1,5 @@
 """Tests for C-02 InsightChain — LLM mocked via _llm injection."""
+
 import json
 from unittest.mock import AsyncMock, MagicMock
 

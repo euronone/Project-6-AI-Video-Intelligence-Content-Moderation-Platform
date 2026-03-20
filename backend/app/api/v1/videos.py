@@ -2,8 +2,10 @@
 Video API — B-02
 CRUD, upload URL generation, and status polling for videos.
 """
+
 import json
 import uuid
+from datetime import UTC, datetime
 from typing import Annotated
 
 import structlog
@@ -15,7 +17,7 @@ from app.api.deps import CurrentUser, OperatorUser
 from app.config import settings
 from app.core.exceptions import ForbiddenError, NotFoundError
 from app.dependencies import get_db
-from app.models.video import Video, VideoSource, VideoStatus
+from app.models.video import Video, VideoStatus
 from app.schemas.video import (
     PaginatedVideos,
     UploadUrlRequest,
@@ -62,13 +64,14 @@ def _build_video_response(video: Video) -> VideoResponse:
 
 # ── GET /videos ───────────────────────────────────────────────────────────────
 
+
 @router.get("", response_model=PaginatedVideos, summary="List videos with pagination and filters")
 async def list_videos(
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
     page: int = Query(1, ge=1),
     page_size: int = Query(settings.DEFAULT_PAGE_SIZE, ge=1, le=settings.MAX_PAGE_SIZE),
-    status_filter: VideoStatus | None = Query(None, alias="status"),
+    status_filter: VideoStatus | None = Query(None, alias="status"),  # noqa: B008
     q: str | None = Query(None, description="Search by title"),
 ) -> PaginatedVideos:
     base_query = select(Video).where(
@@ -84,9 +87,7 @@ async def list_videos(
     total = count_result.scalar_one()
 
     result = await db.execute(
-        base_query.order_by(Video.created_at.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
+        base_query.order_by(Video.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
     )
     videos = result.scalars().all()
 
@@ -99,6 +100,7 @@ async def list_videos(
 
 
 # ── POST /videos/upload-url ───────────────────────────────────────────────────
+
 
 @router.post(
     "/upload-url",
@@ -123,6 +125,7 @@ async def get_upload_url(
 
 
 # ── POST /videos ──────────────────────────────────────────────────────────────
+
 
 @router.post(
     "",
@@ -159,15 +162,14 @@ async def create_video(
 
 # ── GET /videos/{id} ──────────────────────────────────────────────────────────
 
+
 @router.get("/{video_id}", response_model=VideoResponse, summary="Get video detail")
 async def get_video(
     video_id: uuid.UUID,
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> VideoResponse:
-    result = await db.execute(
-        select(Video).where(Video.id == video_id, Video.deleted_at.is_(None))
-    )
+    result = await db.execute(select(Video).where(Video.id == video_id, Video.deleted_at.is_(None)))
     video = result.scalar_one_or_none()
     if not video:
         raise NotFoundError("Video", str(video_id))
@@ -180,15 +182,14 @@ async def get_video(
 
 # ── GET /videos/{id}/status ───────────────────────────────────────────────────
 
+
 @router.get("/{video_id}/status", response_model=VideoStatusResponse, summary="Poll video status")
 async def get_video_status(
     video_id: uuid.UUID,
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> VideoStatusResponse:
-    result = await db.execute(
-        select(Video).where(Video.id == video_id, Video.deleted_at.is_(None))
-    )
+    result = await db.execute(select(Video).where(Video.id == video_id, Video.deleted_at.is_(None)))
     video = result.scalar_one_or_none()
     if not video:
         raise NotFoundError("Video", str(video_id))
@@ -202,6 +203,7 @@ async def get_video_status(
 
 # ── PUT /videos/{id} ──────────────────────────────────────────────────────────
 
+
 @router.put("/{video_id}", response_model=VideoResponse, summary="Update video metadata")
 async def update_video(
     video_id: uuid.UUID,
@@ -209,9 +211,7 @@ async def update_video(
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> VideoResponse:
-    result = await db.execute(
-        select(Video).where(Video.id == video_id, Video.deleted_at.is_(None))
-    )
+    result = await db.execute(select(Video).where(Video.id == video_id, Video.deleted_at.is_(None)))
     video = result.scalar_one_or_none()
     if not video:
         raise NotFoundError("Video", str(video_id))
@@ -231,6 +231,7 @@ async def update_video(
 
 # ── DELETE /videos/{id} ───────────────────────────────────────────────────────
 
+
 @router.delete(
     "/{video_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -241,16 +242,12 @@ async def delete_video(
     current_user: OperatorUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
-    from datetime import datetime, timezone
-
-    result = await db.execute(
-        select(Video).where(Video.id == video_id, Video.deleted_at.is_(None))
-    )
+    result = await db.execute(select(Video).where(Video.id == video_id, Video.deleted_at.is_(None)))
     video = result.scalar_one_or_none()
     if not video:
         raise NotFoundError("Video", str(video_id))
 
-    video.deleted_at = datetime.now(timezone.utc).isoformat()
+    video.deleted_at = datetime.now(UTC).isoformat()
     video.status = VideoStatus.DELETED
     # Stub: enqueue S3 cleanup — cleanup_tasks.delete_video_artifacts.delay(str(video_id))
     logger.info("video_soft_deleted", video_id=str(video_id))

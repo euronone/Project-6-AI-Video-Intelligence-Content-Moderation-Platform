@@ -1,4 +1,5 @@
 """Tests for S-07 StreamService — DB and Redis mocked."""
+
 from __future__ import annotations
 
 import uuid
@@ -8,7 +9,6 @@ import pytest
 
 from app.core.exceptions import NotFoundError
 from app.models.alert import StreamStatus
-
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -49,6 +49,7 @@ def _make_redis():
 
 # ── list_streams ───────────────────────────────────────────────────────────────
 
+
 class TestListStreams:
     @pytest.mark.asyncio
     async def test_returns_stream_list(self):
@@ -60,8 +61,10 @@ class TestListStreams:
 
         mock_list_resp = MagicMock()
         mock_list_resp.total = 1
-        with patch("app.services.stream_service.StreamResponse") as MockResp, \
-             patch("app.services.stream_service.StreamListResponse", return_value=mock_list_resp):
+        with (
+            patch("app.services.stream_service.StreamResponse") as MockResp,
+            patch("app.services.stream_service.StreamListResponse", return_value=mock_list_resp),
+        ):
             MockResp.model_validate.return_value = MagicMock()
             service = StreamService(db=db, redis=redis)
             result = await service.list_streams()
@@ -70,6 +73,7 @@ class TestListStreams:
 
 
 # ── create_stream ──────────────────────────────────────────────────────────────
+
 
 class TestCreateStream:
     @pytest.mark.asyncio
@@ -84,8 +88,10 @@ class TestCreateStream:
         body = MagicMock(spec=StreamCreate)
         body.title = "Live Test"
 
-        with patch("app.services.stream_service.LiveStream", return_value=stream), \
-             patch("app.services.stream_service.StreamResponse") as MockResp:
+        with (
+            patch("app.services.stream_service.LiveStream", return_value=stream),
+            patch("app.services.stream_service.StreamResponse") as MockResp,
+        ):
             MockResp.model_validate.return_value = MagicMock()
             service = StreamService(db=db, redis=redis)
             await service.create_stream(_OWNER_ID, None, body)
@@ -95,6 +101,7 @@ class TestCreateStream:
 
 
 # ── get_stream ─────────────────────────────────────────────────────────────────
+
 
 class TestGetStream:
     @pytest.mark.asyncio
@@ -123,6 +130,7 @@ class TestGetStream:
 
 
 # ── stop_stream ────────────────────────────────────────────────────────────────
+
 
 class TestStopStream:
     @pytest.mark.asyncio
@@ -154,6 +162,7 @@ class TestStopStream:
 
 # ── broadcast_event ────────────────────────────────────────────────────────────
 
+
 class TestBroadcastEvent:
     @pytest.mark.asyncio
     async def test_publishes_to_redis_channel(self):
@@ -173,10 +182,12 @@ class TestBroadcastEvent:
 
 # ── subscribe_websocket ────────────────────────────────────────────────────────
 
+
 class TestSubscribeWebsocket:
     @pytest.mark.asyncio
     async def test_closes_with_4001_on_invalid_token(self):
         from jose import JWTError
+
         from app.services.stream_service import StreamService
 
         db = _make_db()

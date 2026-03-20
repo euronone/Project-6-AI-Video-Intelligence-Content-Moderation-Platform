@@ -10,16 +10,16 @@ Public API:
     await service.export_csv(tenant_id, date_from, date_to)      -> Generator[str]
     await service.record_event(event_type, tenant_id, **kwargs)  -> None
 """
+
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 from datetime import date, timedelta
-from typing import AsyncGenerator
 
+import redis.asyncio as aioredis
 import structlog
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-import redis.asyncio as aioredis
 
 from app.models.analytics import AnalyticsEvent, EventType
 from app.schemas.analytics import (
@@ -66,17 +66,23 @@ class AnalyticsService:
         if tenant_id:
             base = base.where(AnalyticsEvent.tenant_id == tenant_id)
 
-        processed_count = await self._db.scalar(
-            select(func.count()).select_from(
-                base.where(AnalyticsEvent.event_type == EventType.VIDEO_PROCESSED).subquery()
+        processed_count = (
+            await self._db.scalar(
+                select(func.count()).select_from(
+                    base.where(AnalyticsEvent.event_type == EventType.VIDEO_PROCESSED).subquery()
+                )
             )
-        ) or 0
+            or 0
+        )
 
-        violations_count = await self._db.scalar(
-            select(func.count()).select_from(
-                base.where(AnalyticsEvent.event_type == EventType.VIOLATION_DETECTED).subquery()
+        violations_count = (
+            await self._db.scalar(
+                select(func.count()).select_from(
+                    base.where(AnalyticsEvent.event_type == EventType.VIOLATION_DETECTED).subquery()
+                )
             )
-        ) or 0
+            or 0
+        )
 
         violation_rate = round(
             (violations_count / processed_count * 100) if processed_count else 0.0, 2
@@ -90,8 +96,7 @@ class AnalyticsService:
             .limit(5)
         )
         top_categories = [
-            {"category": row.category or "unknown", "count": row.cnt}
-            for row in cat_result
+            {"category": row.category or "unknown", "count": row.cnt} for row in cat_result
         ]
 
         summary = AnalyticsSummary(
@@ -150,9 +155,7 @@ class AnalyticsService:
             .group_by(AnalyticsEvent.event_date)
             .order_by(AnalyticsEvent.event_date)
         )
-        time_series = [
-            ViolationDataPoint(date=row.event_date, count=row.cnt) for row in ts_result
-        ]
+        time_series = [ViolationDataPoint(date=row.event_date, count=row.cnt) for row in ts_result]
 
         cat_result = await self._db.execute(
             select(AnalyticsEvent.category, func.count().label("cnt"))

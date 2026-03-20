@@ -1,4 +1,5 @@
 """Tests for /api/v1/webhooks endpoints."""
+
 import pytest
 from httpx import AsyncClient
 
@@ -44,17 +45,23 @@ async def test_create_webhook_invalid_event(client: AsyncClient, admin_token: st
 
 @pytest.mark.asyncio
 async def test_get_webhook(client: AsyncClient, admin_token: str) -> None:
-    created = await client.post(WEBHOOKS_URL, json=_WEBHOOK_PAYLOAD, headers={"Authorization": f"Bearer {admin_token}"})
+    created = await client.post(
+        WEBHOOKS_URL, json=_WEBHOOK_PAYLOAD, headers={"Authorization": f"Bearer {admin_token}"}
+    )
     wid = created.json()["id"]
 
-    resp = await client.get(f"{WEBHOOKS_URL}/{wid}", headers={"Authorization": f"Bearer {admin_token}"})
+    resp = await client.get(
+        f"{WEBHOOKS_URL}/{wid}", headers={"Authorization": f"Bearer {admin_token}"}
+    )
     assert resp.status_code == 200
     assert resp.json()["id"] == wid
 
 
 @pytest.mark.asyncio
 async def test_update_webhook(client: AsyncClient, admin_token: str) -> None:
-    created = await client.post(WEBHOOKS_URL, json=_WEBHOOK_PAYLOAD, headers={"Authorization": f"Bearer {admin_token}"})
+    created = await client.post(
+        WEBHOOKS_URL, json=_WEBHOOK_PAYLOAD, headers={"Authorization": f"Bearer {admin_token}"}
+    )
     wid = created.json()["id"]
 
     resp = await client.put(
@@ -68,13 +75,19 @@ async def test_update_webhook(client: AsyncClient, admin_token: str) -> None:
 
 @pytest.mark.asyncio
 async def test_delete_webhook(client: AsyncClient, admin_token: str) -> None:
-    created = await client.post(WEBHOOKS_URL, json=_WEBHOOK_PAYLOAD, headers={"Authorization": f"Bearer {admin_token}"})
+    created = await client.post(
+        WEBHOOKS_URL, json=_WEBHOOK_PAYLOAD, headers={"Authorization": f"Bearer {admin_token}"}
+    )
     wid = created.json()["id"]
 
-    resp = await client.delete(f"{WEBHOOKS_URL}/{wid}", headers={"Authorization": f"Bearer {admin_token}"})
+    resp = await client.delete(
+        f"{WEBHOOKS_URL}/{wid}", headers={"Authorization": f"Bearer {admin_token}"}
+    )
     assert resp.status_code == 204
 
-    resp2 = await client.get(f"{WEBHOOKS_URL}/{wid}", headers={"Authorization": f"Bearer {admin_token}"})
+    resp2 = await client.get(
+        f"{WEBHOOKS_URL}/{wid}", headers={"Authorization": f"Bearer {admin_token}"}
+    )
     assert resp2.status_code == 404
 
 

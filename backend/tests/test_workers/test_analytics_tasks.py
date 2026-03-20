@@ -1,4 +1,5 @@
 """Tests for W-04 — analytics_tasks (DB and Redis mocked)."""
+
 from __future__ import annotations
 
 import uuid
@@ -6,8 +7,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ── aggregate_daily_stats_task ─────────────────────────────────────────────────
+
 
 class TestAggregateDailyStatsTask:
     def _mock_db_with_counts(self, videos=3, violations=1, reviews=2, avg_conf=0.75):
@@ -30,6 +31,7 @@ class TestAggregateDailyStatsTask:
         )
 
         from app.workers.analytics_tasks import aggregate_daily_stats_task
+
         result = aggregate_daily_stats_task(date_str="2026-03-18")
 
         assert result["date"] == "2026-03-18"
@@ -43,6 +45,7 @@ class TestAggregateDailyStatsTask:
         mock_sync_session.return_value = self._mock_db_with_counts()
 
         from app.workers.analytics_tasks import aggregate_daily_stats_task
+
         result = aggregate_daily_stats_task()
 
         # Should not raise and should have a date key
@@ -55,7 +58,8 @@ class TestAggregateDailyStatsTask:
         mock_sync_session.return_value = mock_db
 
         from app.workers.analytics_tasks import aggregate_daily_stats_task
-        with pytest.raises(Exception):
+
+        with pytest.raises(Exception):  # noqa: B017 — retry wraps varied error types
             aggregate_daily_stats_task.apply(args=["2026-03-18"]).get(propagate=True)
 
     @patch("app.workers.analytics_tasks.sync_session")
@@ -63,12 +67,14 @@ class TestAggregateDailyStatsTask:
         mock_sync_session.return_value = self._mock_db_with_counts(videos=1)
 
         from app.workers.analytics_tasks import aggregate_daily_stats_task
+
         result = aggregate_daily_stats_task(date_str="2026-03-18", tenant_id="tenant-abc")
 
         assert result["tenant_id"] == "tenant-abc"
 
 
 # ── compute_policy_effectiveness_task ─────────────────────────────────────────
+
 
 class TestComputePolicyEffectivenessTask:
     @patch("app.workers.analytics_tasks.sync_session")
@@ -84,6 +90,7 @@ class TestComputePolicyEffectivenessTask:
 
         policy_id = str(uuid.uuid4())
         from app.workers.analytics_tasks import compute_policy_effectiveness_task
+
         result = compute_policy_effectiveness_task(policy_id)
 
         assert result["policy_id"] == policy_id
@@ -101,6 +108,7 @@ class TestComputePolicyEffectivenessTask:
         mock_sync_session.return_value = mock_db
 
         from app.workers.analytics_tasks import compute_policy_effectiveness_task
+
         result = compute_policy_effectiveness_task(str(uuid.uuid4()))
 
         assert result["approval_rate"] == 0.0
@@ -109,6 +117,7 @@ class TestComputePolicyEffectivenessTask:
 
 # ── flush_analytics_events_task ───────────────────────────────────────────────
 
+
 class TestFlushAnalyticsEventsTask:
     @patch("app.workers.analytics_tasks.sync_session")
     @patch("app.workers.analytics_tasks.redis_lib" if False else "redis.from_url")
@@ -116,15 +125,17 @@ class TestFlushAnalyticsEventsTask:
         import json as _json
 
         events = [
-            _json.dumps({
-                "event_type": "video_processed",
-                "video_id": str(uuid.uuid4()),
-                "tenant_id": "t1",
-                "category": None,
-                "confidence": None,
-                "extra": None,
-                "event_date": "2026-03-18",
-            }),
+            _json.dumps(
+                {
+                    "event_type": "video_processed",
+                    "video_id": str(uuid.uuid4()),
+                    "tenant_id": "t1",
+                    "category": None,
+                    "confidence": None,
+                    "extra": None,
+                    "event_date": "2026-03-18",
+                }
+            ),
         ]
 
         mock_redis = MagicMock()
@@ -136,10 +147,12 @@ class TestFlushAnalyticsEventsTask:
         mock_db.__enter__ = lambda s: mock_db
         mock_db.__exit__ = MagicMock(return_value=False)
 
-        with patch("app.workers.analytics_tasks.sync_session", return_value=mock_db), \
-             patch("redis.from_url", return_value=mock_redis):
-
+        with (
+            patch("app.workers.analytics_tasks.sync_session", return_value=mock_db),
+            patch("redis.from_url", return_value=mock_redis),
+        ):
             from app.workers.analytics_tasks import flush_analytics_events_task
+
             result = flush_analytics_events_task()
 
         assert result["flushed"] == 1
@@ -160,6 +173,7 @@ class TestFlushAnalyticsEventsTask:
 
         with patch("redis.from_url", return_value=mock_redis):
             from app.workers.analytics_tasks import flush_analytics_events_task
+
             result = flush_analytics_events_task()
 
         assert result["errors"] == 1
@@ -175,10 +189,12 @@ class TestFlushAnalyticsEventsTask:
         mock_db.__enter__ = lambda s: mock_db
         mock_db.__exit__ = MagicMock(return_value=False)
 
-        with patch("app.workers.analytics_tasks.sync_session", return_value=mock_db), \
-             patch("redis.from_url", return_value=mock_redis):
-
+        with (
+            patch("app.workers.analytics_tasks.sync_session", return_value=mock_db),
+            patch("redis.from_url", return_value=mock_redis),
+        ):
             from app.workers.analytics_tasks import flush_analytics_events_task
+
             result = flush_analytics_events_task()
 
         assert result["flushed"] == 0

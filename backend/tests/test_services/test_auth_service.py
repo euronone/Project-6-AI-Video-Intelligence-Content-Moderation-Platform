@@ -1,16 +1,16 @@
 """Tests for S-01 AuthService — all DB and Redis calls mocked."""
+
 from __future__ import annotations
 
 import uuid
-from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.core.exceptions import ConflictError, UnauthorizedError
 
-
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
 
 def _make_user(user_id: str | None = None, email: str = "user@test.com", active: bool = True):
     user = MagicMock()
@@ -43,6 +43,7 @@ def _make_redis():
 
 # ── register ───────────────────────────────────────────────────────────────────
 
+
 class TestRegister:
     @pytest.mark.asyncio
     async def test_registers_new_user_and_issues_tokens(self):
@@ -64,12 +65,14 @@ class TestRegister:
         mock_login_response.access_token = "access_tok"
         mock_login_response.refresh_token = "refresh_tok"
 
-        with patch("app.services.auth_service.hash_password", return_value="hashed"), \
-             patch("app.services.auth_service.create_access_token", return_value="access_tok"), \
-             patch("app.services.auth_service.create_refresh_token", return_value="refresh_tok"), \
-             patch("app.services.auth_service.refresh_token_key", return_value="key:refresh_tok"), \
-             patch("app.services.auth_service.UserResponse") as MockUserResp, \
-             patch("app.services.auth_service.LoginResponse", return_value=mock_login_response):
+        with (
+            patch("app.services.auth_service.hash_password", return_value="hashed"),
+            patch("app.services.auth_service.create_access_token", return_value="access_tok"),
+            patch("app.services.auth_service.create_refresh_token", return_value="refresh_tok"),
+            patch("app.services.auth_service.refresh_token_key", return_value="key:refresh_tok"),
+            patch("app.services.auth_service.UserResponse") as MockUserResp,
+            patch("app.services.auth_service.LoginResponse", return_value=mock_login_response),
+        ):
             MockUserResp.model_validate.return_value = MagicMock()
 
             service = AuthService(db=db, redis=redis)
@@ -96,6 +99,7 @@ class TestRegister:
 
 # ── login ──────────────────────────────────────────────────────────────────────
 
+
 class TestLogin:
     @pytest.mark.asyncio
     async def test_returns_tokens_on_valid_credentials(self):
@@ -109,12 +113,14 @@ class TestLogin:
         mock_login_response.access_token = "access"
         mock_login_response.refresh_token = "refresh"
 
-        with patch("app.services.auth_service.verify_password", return_value=True), \
-             patch("app.services.auth_service.create_access_token", return_value="access"), \
-             patch("app.services.auth_service.create_refresh_token", return_value="refresh"), \
-             patch("app.services.auth_service.refresh_token_key", return_value="key:r"), \
-             patch("app.services.auth_service.UserResponse") as MockUserResp, \
-             patch("app.services.auth_service.LoginResponse", return_value=mock_login_response):
+        with (
+            patch("app.services.auth_service.verify_password", return_value=True),
+            patch("app.services.auth_service.create_access_token", return_value="access"),
+            patch("app.services.auth_service.create_refresh_token", return_value="refresh"),
+            patch("app.services.auth_service.refresh_token_key", return_value="key:r"),
+            patch("app.services.auth_service.UserResponse") as MockUserResp,
+            patch("app.services.auth_service.LoginResponse", return_value=mock_login_response),
+        ):
             MockUserResp.model_validate.return_value = MagicMock()
 
             service = AuthService(db=db, redis=redis)
@@ -150,6 +156,7 @@ class TestLogin:
 
 # ── refresh_tokens ─────────────────────────────────────────────────────────────
 
+
 class TestRefreshTokens:
     @pytest.mark.asyncio
     async def test_rotates_tokens_on_valid_refresh(self):
@@ -160,10 +167,15 @@ class TestRefreshTokens:
         redis = _make_redis()
         redis.get = AsyncMock(return_value=str(user.id))
 
-        with patch("app.services.auth_service.decode_token", return_value={"type": "refresh", "sub": str(user.id)}), \
-             patch("app.services.auth_service.refresh_token_key", return_value="key:old"), \
-             patch("app.services.auth_service.create_access_token", return_value="new_access"), \
-             patch("app.services.auth_service.create_refresh_token", return_value="new_refresh"):
+        with (
+            patch(
+                "app.services.auth_service.decode_token",
+                return_value={"type": "refresh", "sub": str(user.id)},
+            ),
+            patch("app.services.auth_service.refresh_token_key", return_value="key:old"),
+            patch("app.services.auth_service.create_access_token", return_value="new_access"),
+            patch("app.services.auth_service.create_refresh_token", return_value="new_refresh"),
+        ):
             service = AuthService(db=db, redis=redis)
             result = await service.refresh_tokens("old_refresh_token")
 
@@ -179,8 +191,10 @@ class TestRefreshTokens:
         redis = _make_redis()
         redis.get = AsyncMock(return_value=None)  # key not in Redis → revoked
 
-        with patch("app.services.auth_service.decode_token", return_value={"type": "refresh"}), \
-             patch("app.services.auth_service.refresh_token_key", return_value="key:r"):
+        with (
+            patch("app.services.auth_service.decode_token", return_value={"type": "refresh"}),
+            patch("app.services.auth_service.refresh_token_key", return_value="key:r"),
+        ):
             service = AuthService(db=db, redis=redis)
             with pytest.raises(UnauthorizedError, match="revoked"):
                 await service.refresh_tokens("revoked_token")
@@ -199,6 +213,7 @@ class TestRefreshTokens:
 
 
 # ── logout ─────────────────────────────────────────────────────────────────────
+
 
 class TestLogout:
     @pytest.mark.asyncio

@@ -1,4 +1,5 @@
 """Tests for A-03 SafetyCheckerAgent — OpenAI mocked."""
+
 import json
 from unittest.mock import AsyncMock, MagicMock
 
@@ -40,15 +41,15 @@ async def test_safe_content_approved(agent):
         "policy_triggers": [],
     }
     agent._client = _mock_client(return_value=_fake_response(payload))
-    result = await agent.run({
-        "video_id": "v1",
-        "content_analysis": {"summary": "Cooking tutorial"},
-        "scene_classifications": [
-            {"category": "safe", "confidence": 0.99, "timestamp": 0.0}
-        ],
-        "policy_rules": [],
-        "transcript": "Making pasta today.",
-    })
+    result = await agent.run(
+        {
+            "video_id": "v1",
+            "content_analysis": {"summary": "Cooking tutorial"},
+            "scene_classifications": [{"category": "safe", "confidence": 0.99, "timestamp": 0.0}],
+            "policy_rules": [],
+            "transcript": "Making pasta today.",
+        }
+    )
 
     sr = result["safety_result"]
     assert sr["decision"] == ModerationDecision.APPROVED.value
@@ -75,15 +76,17 @@ async def test_violence_detected_rejected(agent):
         "policy_triggers": ["no_violence"],
     }
     agent._client = _mock_client(return_value=_fake_response(payload))
-    result = await agent.run({
-        "video_id": "v2",
-        "content_analysis": {"summary": "Street fight footage"},
-        "scene_classifications": [
-            {"category": "violence", "confidence": 0.87, "timestamp": 12.0}
-        ],
-        "policy_rules": [{"category": "violence", "threshold": 0.5, "name": "no_violence"}],
-        "transcript": "",
-    })
+    result = await agent.run(
+        {
+            "video_id": "v2",
+            "content_analysis": {"summary": "Street fight footage"},
+            "scene_classifications": [
+                {"category": "violence", "confidence": 0.87, "timestamp": 12.0}
+            ],
+            "policy_rules": [{"category": "violence", "threshold": 0.5, "name": "no_violence"}],
+            "transcript": "",
+        }
+    )
 
     sr = result["safety_result"]
     assert sr["decision"] == ModerationDecision.REJECTED.value
@@ -93,15 +96,15 @@ async def test_violence_detected_rejected(agent):
 @pytest.mark.asyncio
 async def test_hard_stop_nudity_high_confidence(agent):
     """High-confidence nudity should trigger hard-stop without calling LLM."""
-    result = await agent.run({
-        "video_id": "v3",
-        "content_analysis": {},
-        "scene_classifications": [
-            {"category": "nudity", "confidence": 0.95, "timestamp": 5.0}
-        ],
-        "policy_rules": [],
-        "transcript": "",
-    })
+    result = await agent.run(
+        {
+            "video_id": "v3",
+            "content_analysis": {},
+            "scene_classifications": [{"category": "nudity", "confidence": 0.95, "timestamp": 5.0}],
+            "policy_rules": [],
+            "transcript": "",
+        }
+    )
 
     sr = result["safety_result"]
     assert sr["decision"] == ModerationDecision.REJECTED.value
@@ -112,13 +115,15 @@ async def test_hard_stop_nudity_high_confidence(agent):
 @pytest.mark.asyncio
 async def test_api_failure_defaults_to_needs_review(agent):
     agent._client = _mock_client(side_effect=Exception("network error"))
-    result = await agent.run({
-        "video_id": "v4",
-        "content_analysis": {"summary": "unknown"},
-        "scene_classifications": [{"category": "safe", "confidence": 0.5}],
-        "policy_rules": [],
-        "transcript": "",
-    })
+    result = await agent.run(
+        {
+            "video_id": "v4",
+            "content_analysis": {"summary": "unknown"},
+            "scene_classifications": [{"category": "safe", "confidence": 0.5}],
+            "policy_rules": [],
+            "transcript": "",
+        }
+    )
 
     sr = result["safety_result"]
     assert sr["decision"] == ModerationDecision.NEEDS_REVIEW.value
@@ -126,15 +131,15 @@ async def test_api_failure_defaults_to_needs_review(agent):
 
 @pytest.mark.asyncio
 async def test_zero_tolerance_policy_triggers_hard_stop(agent):
-    result = await agent.run({
-        "video_id": "v5",
-        "content_analysis": {},
-        "scene_classifications": [
-            {"category": "drugs", "confidence": 0.6, "timestamp": 3.0}
-        ],
-        "policy_rules": [{"category": "drugs", "threshold": 0}],
-        "transcript": "",
-    })
+    result = await agent.run(
+        {
+            "video_id": "v5",
+            "content_analysis": {},
+            "scene_classifications": [{"category": "drugs", "confidence": 0.6, "timestamp": 3.0}],
+            "policy_rules": [{"category": "drugs", "threshold": 0}],
+            "transcript": "",
+        }
+    )
 
     sr = result["safety_result"]
     assert sr["decision"] == ModerationDecision.REJECTED.value

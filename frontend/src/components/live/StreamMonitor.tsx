@@ -45,7 +45,7 @@ export function StreamMonitor({ streams, onStop, isLoading, onAddStream }: Strea
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
         <Radio className="mb-3 h-8 w-8 text-muted-foreground" />
-        <p className="font-medium">No streams yet</p>
+        <p className="font-medium">No active streams</p>
         <p className="mt-1 text-sm text-muted-foreground">
           Add a stream source to start AI-powered live monitoring.
         </p>

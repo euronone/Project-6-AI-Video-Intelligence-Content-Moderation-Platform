@@ -1,4 +1,5 @@
 """Tests for D-06 LiveStream and Alert models."""
+
 from __future__ import annotations
 
 import uuid

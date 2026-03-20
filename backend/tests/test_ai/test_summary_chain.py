@@ -1,4 +1,5 @@
 """Tests for C-03 SummaryChain — LLM mocked via _llm injection."""
+
 import json
 from unittest.mock import AsyncMock, MagicMock
 
@@ -79,7 +80,7 @@ async def test_summary_llm_failure_returns_fallback():
     )
     assert "failed" in result.executive_summary.lower() or "Summary" in result.executive_summary
     assert result.key_moments == []
-    assert result.content_rating == "G"   # safe default on failure
+    assert result.content_rating == "G"  # safe default on failure
 
 
 @pytest.mark.asyncio

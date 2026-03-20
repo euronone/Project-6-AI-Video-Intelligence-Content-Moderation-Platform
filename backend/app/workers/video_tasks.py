@@ -16,14 +16,15 @@ Task execution order for a full pipeline run:
 Public entry point:
     process_video.delay(video_id="...", s3_key="videos/abc.mp4")
 """
+
 from __future__ import annotations
 
 import asyncio
+import os
 import subprocess
 import tempfile
-import os
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import boto3
@@ -42,6 +43,7 @@ logger = structlog.get_logger(__name__)
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
 
 def _s3_url(s3_key: str) -> str:
     """Build an s3:// URL from a storage key."""
@@ -65,10 +67,11 @@ def _set_video_status(video_id: str, status: VideoStatus, error: str | None = No
             video.status = status
             if error:
                 video.error_message = error
-            video.updated_at = datetime.now(timezone.utc)
+            video.updated_at = datetime.now(UTC)
 
 
 # ── W-02-A: Frame extraction ───────────────────────────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -109,10 +112,11 @@ def extract_frames_task(
         }
     except FrameExtractionError as exc:
         logger.error("extract_frames_task_error", video_id=video_id, error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 # ── W-02-B: Audio transcription ────────────────────────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -154,13 +158,14 @@ def transcribe_audio_task(
         }
     except Exception as exc:
         logger.error("transcribe_audio_task_error", video_id=video_id, error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     finally:
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
 
 
 # ── W-02-C: Thumbnail generation ───────────────────────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -186,11 +191,15 @@ def generate_thumbnail_task(self, video_id: str, s3_key: str) -> str | None:
         _s3_client().download_file(settings.S3_BUCKET_NAME, s3_key, tmp_video)
 
         cmd = [
-            "ffmpeg", "-y",
-            "-i", tmp_video,
-            "-vframes", "1",
+            "ffmpeg",
+            "-y",
+            "-i",
+            tmp_video,
+            "-vframes",
+            "1",
             "-an",
-            "-q:v", "2",
+            "-q:v",
+            "2",
             tmp_thumb,
         ]
         proc = subprocess.run(cmd, capture_output=True, timeout=60, check=False)
@@ -207,14 +216,14 @@ def generate_thumbnail_task(self, video_id: str, s3_key: str) -> str | None:
             video = db.get(Video, uuid.UUID(video_id))
             if video:
                 video.thumbnail_s3_key = thumb_key
-                video.updated_at = datetime.now(timezone.utc)
+                video.updated_at = datetime.now(UTC)
 
         logger.info("generate_thumbnail_task_done", video_id=video_id, thumb_key=thumb_key)
         return thumb_key
 
     except Exception as exc:
         logger.error("generate_thumbnail_task_error", video_id=video_id, error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     finally:
         for p in (tmp_video, tmp_thumb):
             if os.path.exists(p):
@@ -222,6 +231,7 @@ def generate_thumbnail_task(self, video_id: str, s3_key: str) -> str | None:
 
 
 # ── W-02-D: Full AI analysis pipeline ─────────────────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -260,7 +270,7 @@ def run_analysis_pipeline_task(
     except Exception as exc:
         logger.error("run_analysis_pipeline_task_error", video_id=video_id, error=str(exc))
         _set_video_status(video_id, VideoStatus.FAILED, error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
     # Map AI decision to DB status
     _DECISION_TO_STATUS: dict[str, ModerationStatus] = {
@@ -283,7 +293,7 @@ def run_analysis_pipeline_task(
             existing.violations = [v.model_dump() for v in report.violations]
             existing.summary = report.content_summary
             existing.ai_model = settings.OPENAI_MODEL
-            existing.updated_at = datetime.now(timezone.utc)
+            existing.updated_at = datetime.now(UTC)
         else:
             db.add(
                 ModerationResult(
@@ -300,7 +310,7 @@ def run_analysis_pipeline_task(
         video = db.get(Video, uuid.UUID(video_id))
         if video:
             video.status = VideoStatus.READY
-            video.updated_at = datetime.now(timezone.utc)
+            video.updated_at = datetime.now(UTC)
 
     logger.info(
         "run_analysis_pipeline_task_done",
@@ -312,6 +322,7 @@ def run_analysis_pipeline_task(
 
 
 # ── W-02-E: Orchestrating entry point ─────────────────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -376,4 +387,4 @@ def process_video(
     except Exception as exc:
         logger.error("process_video_failed", video_id=video_id, error=str(exc))
         _set_video_status(video_id, VideoStatus.FAILED, error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc

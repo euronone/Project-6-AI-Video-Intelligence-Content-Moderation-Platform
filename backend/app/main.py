@@ -1,5 +1,5 @@
-from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
@@ -24,6 +24,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
     # Cleanup on shutdown (close DB engine, Redis pool, etc.)
     from app.dependencies import _engine, _redis
+
     if _engine:
         await _engine.dispose()
     if _redis:
@@ -53,7 +54,7 @@ def create_app() -> FastAPI:
     )
 
     # ── Exception handlers ────────────────────────────────────────────────────
-    app.add_exception_handler(AppException, app_exception_handler)          # type: ignore[arg-type]
+    app.add_exception_handler(AppException, app_exception_handler)  # type: ignore[arg-type]
     app.add_exception_handler(RequestValidationError, validation_exception_handler)  # type: ignore[arg-type]
     app.add_exception_handler(Exception, unhandled_exception_handler)
 

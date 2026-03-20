@@ -4,6 +4,7 @@ Tests for C-05 ModerationWorkflowGraph — moderation_chain mocked.
 Injects a mock chain function directly into the graph module to avoid
 real OpenAI calls while still testing the full LangGraph routing logic.
 """
+
 from unittest.mock import AsyncMock
 
 import pytest
@@ -25,6 +26,7 @@ def _mock_chain(output: ModerationChainOutput):
 def _restore_chain():
     """Restore the real chain function after each test."""
     from app.ai.chains.moderation_chain import run_moderation_chain
+
     wf_module._chain_fn = run_moderation_chain
 
 
@@ -36,15 +38,18 @@ def restore_chain_fn():
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_workflow_approved_high_confidence():
-    _mock_chain(ModerationChainOutput(
-        decision=ModerationDecision.APPROVED,
-        overall_severity=ViolationSeverity.LOW,
-        confidence=0.95,
-        reasoning="Clean content.",
-        recommended_action="approve",
-    ))
+    _mock_chain(
+        ModerationChainOutput(
+            decision=ModerationDecision.APPROVED,
+            overall_severity=ViolationSeverity.LOW,
+            confidence=0.95,
+            reasoning="Clean content.",
+            recommended_action="approve",
+        )
+    )
 
     result = await run_moderation_workflow(
         video_id="v001",
@@ -61,13 +66,15 @@ async def test_workflow_approved_high_confidence():
 
 @pytest.mark.asyncio
 async def test_workflow_rejected_high_confidence():
-    _mock_chain(ModerationChainOutput(
-        decision=ModerationDecision.REJECTED,
-        overall_severity=ViolationSeverity.HIGH,
-        confidence=0.91,
-        reasoning="Graphic violence.",
-        recommended_action="reject",
-    ))
+    _mock_chain(
+        ModerationChainOutput(
+            decision=ModerationDecision.REJECTED,
+            overall_severity=ViolationSeverity.HIGH,
+            confidence=0.91,
+            reasoning="Graphic violence.",
+            recommended_action="reject",
+        )
+    )
 
     result = await run_moderation_workflow(
         video_id="v002",
@@ -84,13 +91,15 @@ async def test_workflow_rejected_high_confidence():
 @pytest.mark.asyncio
 async def test_workflow_escalates_on_low_confidence():
     """When chain confidence < threshold, workflow overrides decision to ESCALATED."""
-    _mock_chain(ModerationChainOutput(
-        decision=ModerationDecision.APPROVED,
-        overall_severity=ViolationSeverity.LOW,
-        confidence=0.45,   # below default threshold of 0.6
-        reasoning="Uncertain.",
-        recommended_action="approve",
-    ))
+    _mock_chain(
+        ModerationChainOutput(
+            decision=ModerationDecision.APPROVED,
+            overall_severity=ViolationSeverity.LOW,
+            confidence=0.45,  # below default threshold of 0.6
+            reasoning="Uncertain.",
+            recommended_action="approve",
+        )
+    )
 
     result = await run_moderation_workflow(
         video_id="v003",
@@ -107,13 +116,15 @@ async def test_workflow_escalates_on_low_confidence():
 @pytest.mark.asyncio
 async def test_workflow_custom_threshold():
     """A very high threshold forces escalation even on moderately confident decisions."""
-    _mock_chain(ModerationChainOutput(
-        decision=ModerationDecision.APPROVED,
-        overall_severity=ViolationSeverity.LOW,
-        confidence=0.75,
-        reasoning="Likely safe.",
-        recommended_action="approve",
-    ))
+    _mock_chain(
+        ModerationChainOutput(
+            decision=ModerationDecision.APPROVED,
+            overall_severity=ViolationSeverity.LOW,
+            confidence=0.75,
+            reasoning="Likely safe.",
+            recommended_action="approve",
+        )
+    )
 
     result = await run_moderation_workflow(
         video_id="v004",
@@ -147,11 +158,13 @@ async def test_workflow_chain_failure_returns_safe_fallback():
 
 @pytest.mark.asyncio
 async def test_workflow_result_contains_video_id():
-    _mock_chain(ModerationChainOutput(
-        decision=ModerationDecision.APPROVED,
-        confidence=0.9,
-        recommended_action="approve",
-    ))
+    _mock_chain(
+        ModerationChainOutput(
+            decision=ModerationDecision.APPROVED,
+            confidence=0.9,
+            recommended_action="approve",
+        )
+    )
 
     result = await run_moderation_workflow(video_id="my-video-123")
     assert result.video_id == "my-video-123"
@@ -159,13 +172,15 @@ async def test_workflow_result_contains_video_id():
 
 @pytest.mark.asyncio
 async def test_workflow_with_policy_rules_and_violations():
-    _mock_chain(ModerationChainOutput(
-        decision=ModerationDecision.REJECTED,
-        overall_severity=ViolationSeverity.CRITICAL,
-        confidence=0.98,
-        reasoning="Zero-tolerance policy triggered.",
-        recommended_action="reject",
-    ))
+    _mock_chain(
+        ModerationChainOutput(
+            decision=ModerationDecision.REJECTED,
+            overall_severity=ViolationSeverity.CRITICAL,
+            confidence=0.98,
+            reasoning="Zero-tolerance policy triggered.",
+            recommended_action="reject",
+        )
+    )
 
     result = await run_moderation_workflow(
         video_id="v006",

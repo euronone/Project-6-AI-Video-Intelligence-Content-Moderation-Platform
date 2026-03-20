@@ -1,4 +1,5 @@
 """Tests for T-04 ObjectDetector — OpenAI client mocked."""
+
 from __future__ import annotations
 
 import json
@@ -8,8 +9,8 @@ import pytest
 
 from app.ai.tools.object_detector import ObjectDetectionResult, detect_objects
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _mock_client(payload: dict | None = None, side_effect=None) -> MagicMock:
     msg = MagicMock()
@@ -20,9 +21,7 @@ def _mock_client(payload: dict | None = None, side_effect=None) -> MagicMock:
     resp.choices = [choice]
 
     client = MagicMock()
-    client.chat.completions.create = AsyncMock(
-        return_value=resp, side_effect=side_effect
-    )
+    client.chat.completions.create = AsyncMock(return_value=resp, side_effect=side_effect)
     return client
 
 
@@ -31,15 +30,14 @@ _FAKE_FRAME = "aGVsbG8="
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_detect_objects_happy_path():
     payload = {
         "objects": ["person", "car", "tree"],
         "frame_detections": [["person", "car"], ["tree"]],
     }
-    result = await detect_objects(
-        [_FAKE_FRAME, _FAKE_FRAME], _client=_mock_client(payload)
-    )
+    result = await detect_objects([_FAKE_FRAME, _FAKE_FRAME], _client=_mock_client(payload))
 
     assert isinstance(result, ObjectDetectionResult)
     assert "person" in result.objects

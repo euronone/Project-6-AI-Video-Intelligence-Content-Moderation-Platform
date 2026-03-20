@@ -18,10 +18,10 @@ Public API:
     result.risk_signals         # list[str]
     result.audience_suitability # str
 """
+
 from __future__ import annotations
 
 import json
-from typing import Any
 
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -35,6 +35,7 @@ logger = structlog.get_logger(__name__)
 _MODEL = "gpt-4o"
 
 # ── Output schema ─────────────────────────────────────────────────────────────
+
 
 class InsightOutput(BaseModel):
     key_insights: list[str] = Field(
@@ -52,8 +53,7 @@ class InsightOutput(BaseModel):
     audience_suitability: str = Field(
         default="general",
         description=(
-            "Who this content is appropriate for: "
-            "general | children | teens | adults | restricted"
+            "Who this content is appropriate for: general | children | teens | adults | restricted"
         ),
     )
 
@@ -90,6 +90,7 @@ Return only the JSON object.
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
+
 
 async def run_insight_chain(
     transcript: str = "",

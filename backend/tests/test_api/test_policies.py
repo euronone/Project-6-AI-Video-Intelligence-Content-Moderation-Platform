@@ -1,4 +1,5 @@
 """Tests for /api/v1/policies endpoints."""
+
 import pytest
 from httpx import AsyncClient
 
@@ -39,17 +40,23 @@ async def test_create_policy(client: AsyncClient, admin_token: str) -> None:
 
 @pytest.mark.asyncio
 async def test_get_policy(client: AsyncClient, admin_token: str) -> None:
-    created = await client.post(POLICIES_URL, json=_POLICY_PAYLOAD, headers={"Authorization": f"Bearer {admin_token}"})
+    created = await client.post(
+        POLICIES_URL, json=_POLICY_PAYLOAD, headers={"Authorization": f"Bearer {admin_token}"}
+    )
     policy_id = created.json()["id"]
 
-    resp = await client.get(f"{POLICIES_URL}/{policy_id}", headers={"Authorization": f"Bearer {admin_token}"})
+    resp = await client.get(
+        f"{POLICIES_URL}/{policy_id}", headers={"Authorization": f"Bearer {admin_token}"}
+    )
     assert resp.status_code == 200
     assert resp.json()["id"] == policy_id
 
 
 @pytest.mark.asyncio
 async def test_update_policy(client: AsyncClient, admin_token: str) -> None:
-    created = await client.post(POLICIES_URL, json=_POLICY_PAYLOAD, headers={"Authorization": f"Bearer {admin_token}"})
+    created = await client.post(
+        POLICIES_URL, json=_POLICY_PAYLOAD, headers={"Authorization": f"Bearer {admin_token}"}
+    )
     policy_id = created.json()["id"]
 
     resp = await client.put(
@@ -63,10 +70,14 @@ async def test_update_policy(client: AsyncClient, admin_token: str) -> None:
 
 @pytest.mark.asyncio
 async def test_delete_policy(client: AsyncClient, admin_token: str) -> None:
-    created = await client.post(POLICIES_URL, json=_POLICY_PAYLOAD, headers={"Authorization": f"Bearer {admin_token}"})
+    created = await client.post(
+        POLICIES_URL, json=_POLICY_PAYLOAD, headers={"Authorization": f"Bearer {admin_token}"}
+    )
     policy_id = created.json()["id"]
 
-    resp = await client.delete(f"{POLICIES_URL}/{policy_id}", headers={"Authorization": f"Bearer {admin_token}"})
+    resp = await client.delete(
+        f"{POLICIES_URL}/{policy_id}", headers={"Authorization": f"Bearer {admin_token}"}
+    )
     assert resp.status_code == 204
 
 

@@ -12,6 +12,7 @@ Content analyzer, scene classifier, and metadata extractor run in parallel
 (LangGraph fan-out). Safety checker waits for all three, then report
 generator runs last.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -42,6 +43,7 @@ _report_generator = ReportGeneratorAgent()
 
 # ── Node wrappers (LangGraph expects plain async functions) ───────────────────
 
+
 async def orchestrator_node(state: VideoAnalysisState) -> dict[str, Any]:
     return await _orchestrator.run(dict(state))
 
@@ -67,6 +69,7 @@ async def report_generator_node(state: VideoAnalysisState) -> dict[str, Any]:
 
 
 # ── Build the graph ───────────────────────────────────────────────────────────
+
 
 def _build_graph() -> Any:
     graph = StateGraph(VideoAnalysisState)
@@ -103,6 +106,7 @@ _compiled_graph = _build_graph()
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
+
 
 async def run_video_analysis(
     video_id: str,
@@ -152,6 +156,7 @@ async def run_video_analysis(
     if not report_dict:
         # Graph completed but no report was generated — shouldn't happen
         from app.ai.schemas import ModerationDecision, ViolationSeverity
+
         return ModerationReport(
             video_id=video_id,
             decision=ModerationDecision.NEEDS_REVIEW,

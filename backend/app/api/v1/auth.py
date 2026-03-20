@@ -1,6 +1,8 @@
+import uuid
 from datetime import timedelta
 from typing import Annotated
 
+import redis.asyncio as aioredis
 import structlog
 from fastapi import APIRouter, Depends, status
 from jose import JWTError
@@ -30,13 +32,12 @@ from app.schemas.auth import (
 )
 from app.schemas.user import UserResponse
 
-import redis.asyncio as aioredis
-
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = structlog.get_logger(__name__)
 
 
 # ── POST /auth/register ───────────────────────────────────────────────────────
+
 
 @router.post(
     "/register",
@@ -82,6 +83,7 @@ async def register(
 
 # ── POST /auth/login ──────────────────────────────────────────────────────────
 
+
 @router.post(
     "/login",
     response_model=LoginResponse,
@@ -92,7 +94,9 @@ async def login(
     db: Annotated[AsyncSession, Depends(get_db)],
     redis: Annotated[aioredis.Redis, Depends(get_redis)],
 ) -> LoginResponse:
-    result = await db.execute(select(User).where(User.email == body.email, User.is_active == True))
+    result = await db.execute(
+        select(User).where(User.email == body.email, User.is_active.is_(True))
+    )
     user = result.scalar_one_or_none()
 
     if user is None or not verify_password(body.password, user.password_hash):
@@ -118,6 +122,7 @@ async def login(
 
 # ── POST /auth/refresh ────────────────────────────────────────────────────────
 
+
 @router.post(
     "/refresh",
     response_model=TokenPair,
@@ -130,8 +135,8 @@ async def refresh(
 ) -> TokenPair:
     try:
         payload = decode_token(body.refresh_token)
-    except JWTError:
-        raise UnauthorizedError("Invalid or expired refresh token.")
+    except JWTError as exc:
+        raise UnauthorizedError("Invalid or expired refresh token.") from exc
 
     if payload.get("type") != "refresh":
         raise UnauthorizedError("Invalid token type.")
@@ -141,9 +146,8 @@ async def refresh(
     if not stored_user_id:
         raise UnauthorizedError("Refresh token has been revoked or expired.")
 
-    import uuid as _uuid
     result = await db.execute(
-        select(User).where(User.id == _uuid.UUID(stored_user_id), User.is_active == True)
+        select(User).where(User.id == uuid.UUID(stored_user_id), User.is_active.is_(True))
     )
     user = result.scalar_one_or_none()
     if user is None:
@@ -167,6 +171,7 @@ async def refresh(
 
 # ── POST /auth/logout ─────────────────────────────────────────────────────────
 
+
 @router.post(
     "/logout",
     response_model=MessageResponse,
@@ -184,6 +189,7 @@ async def logout(
 
 
 # ── GET /auth/me ──────────────────────────────────────────────────────────────
+
 
 @router.get(
     "/me",

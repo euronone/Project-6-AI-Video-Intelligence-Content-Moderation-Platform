@@ -1,4 +1,5 @@
 """Tests for T-08 — summary_prompts.py template completeness."""
+
 from app.ai.prompts.summary_prompts import (
     REPORT_SYSTEM,
     REPORT_USER,

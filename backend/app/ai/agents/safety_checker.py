@@ -6,6 +6,7 @@ classifications produced by earlier agents, evaluates them against active
 policy rules, and outputs a structured SafetyResult with violations and a
 moderation decision.
 """
+
 from __future__ import annotations
 
 import json
@@ -103,9 +104,7 @@ class SafetyCheckerAgent(BaseAgent):
         categories = [s.get("category", "safe") for s in scenes]
         return dict(Counter(categories))
 
-    def _check_hard_stops(
-        self, scenes: list[dict], policy_rules: list[dict]
-    ) -> str | None:
+    def _check_hard_stops(self, scenes: list[dict], policy_rules: list[dict]) -> str | None:
         """Return a reason string if content triggers a hard-stop rule, else None."""
         hard_stop_categories = {
             SceneCategory.NUDITY.value,
@@ -134,7 +133,9 @@ class SafetyCheckerAgent(BaseAgent):
         policy_rules: list[dict],
     ) -> SafetyResult:
         user_prompt = SAFETY_CHECK_USER.format(
-            policy_rules=json.dumps(policy_rules, indent=2) if policy_rules else "Default platform policies apply.",
+            policy_rules=json.dumps(policy_rules, indent=2)
+            if policy_rules
+            else "Default platform policies apply.",
             content_summary=content_analysis.get("summary", "(no summary)"),
             transcript_excerpt=transcript[:1000] if transcript else "(no transcript)",
             frame_count=sum(scene_summary.values()),

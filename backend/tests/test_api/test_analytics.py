@@ -1,4 +1,5 @@
 """Tests for /api/v1/analytics endpoints."""
+
 import pytest
 from httpx import AsyncClient
 
@@ -14,7 +15,9 @@ async def _get_token(client: AsyncClient) -> str:
 @pytest.mark.asyncio
 async def test_summary_empty(client: AsyncClient) -> None:
     token = await _get_token(client)
-    resp = await client.get("/api/v1/analytics/summary", headers={"Authorization": f"Bearer {token}"})
+    resp = await client.get(
+        "/api/v1/analytics/summary", headers={"Authorization": f"Bearer {token}"}
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["total_videos_processed"] == 0
@@ -25,7 +28,9 @@ async def test_summary_empty(client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_violations_empty(client: AsyncClient) -> None:
     token = await _get_token(client)
-    resp = await client.get("/api/v1/analytics/violations", headers={"Authorization": f"Bearer {token}"})
+    resp = await client.get(
+        "/api/v1/analytics/violations", headers={"Authorization": f"Bearer {token}"}
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["time_series"] == []
@@ -35,7 +40,9 @@ async def test_violations_empty(client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_export_csv(client: AsyncClient) -> None:
     token = await _get_token(client)
-    resp = await client.get("/api/v1/analytics/export", headers={"Authorization": f"Bearer {token}"})
+    resp = await client.get(
+        "/api/v1/analytics/export", headers={"Authorization": f"Bearer {token}"}
+    )
     assert resp.status_code == 200
     assert "text/csv" in resp.headers["content-type"]
 

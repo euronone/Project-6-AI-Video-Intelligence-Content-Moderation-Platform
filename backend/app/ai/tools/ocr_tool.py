@@ -13,6 +13,7 @@ Public API:
     result.combined_text  # str        all text joined with newlines
     result.error          # str | None set on failure; pipeline continues
 """
+
 from __future__ import annotations
 
 import json
@@ -45,6 +46,7 @@ No markdown, no extra text.
 
 # ── Output schema ─────────────────────────────────────────────────────────────
 
+
 class OCRResult(BaseModel):
     texts: list[str] = Field(
         default_factory=list,
@@ -55,6 +57,7 @@ class OCRResult(BaseModel):
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
+
 
 async def run_ocr(
     frames: list[str],
@@ -83,20 +86,24 @@ async def run_ocr(
 
     content: list[dict] = []
     for frame_b64 in frames_to_process:
-        content.append({
-            "type": "image_url",
-            "image_url": {
-                "url": f"data:image/jpeg;base64,{frame_b64}",
-                "detail": "low",
-            },
-        })
-    content.append({
-        "type": "text",
-        "text": (
-            f"Extract all visible text from these {len(frames_to_process)} frame(s). "
-            "Return only the JSON object."
-        ),
-    })
+        content.append(
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{frame_b64}",
+                    "detail": "low",
+                },
+            }
+        )
+    content.append(
+        {
+            "type": "text",
+            "text": (
+                f"Extract all visible text from these {len(frames_to_process)} frame(s). "
+                "Return only the JSON object."
+            ),
+        }
+    )
 
     logger.info("ocr_tool_start", frame_count=len(frames_to_process))
 

@@ -10,6 +10,7 @@ Entry point node in the LangGraph pipeline. Responsible for:
 
 The orchestrator is the FIRST node. All specialist agents run after it.
 """
+
 from __future__ import annotations
 
 import base64
@@ -24,7 +25,7 @@ logger = structlog.get_logger(__name__)
 
 # Number of frames to sample across the video duration
 _TARGET_FRAMES = 16
-_FRAME_INTERVAL_SEC = 5.0   # fallback when duration unknown
+_FRAME_INTERVAL_SEC = 5.0  # fallback when duration unknown
 
 
 class OrchestratorAgent(BaseAgent):
@@ -81,9 +82,7 @@ class OrchestratorAgent(BaseAgent):
 
     # ── Frame sampling (FFmpeg via subprocess or OpenCV) ──────────────────────
 
-    async def _sample_frames(
-        self, video_url: str
-    ) -> tuple[list[str], list[float]]:
+    async def _sample_frames(self, video_url: str) -> tuple[list[str], list[float]]:
         """
         Sample frames from a video URL.
 
@@ -98,11 +97,17 @@ class OrchestratorAgent(BaseAgent):
             return self._placeholder_frames(_TARGET_FRAMES)
 
         cmd = [
-            "ffmpeg", "-i", video_url,
-            "-vf", f"fps=1/{_FRAME_INTERVAL_SEC},scale=320:-1",
-            "-vframes", str(_TARGET_FRAMES),
-            "-f", "image2pipe",
-            "-vcodec", "mjpeg",
+            "ffmpeg",
+            "-i",
+            video_url,
+            "-vf",
+            f"fps=1/{_FRAME_INTERVAL_SEC},scale=320:-1",
+            "-vframes",
+            str(_TARGET_FRAMES),
+            "-f",
+            "image2pipe",
+            "-vcodec",
+            "mjpeg",
             "pipe:1",
         ]
 
@@ -113,7 +118,7 @@ class OrchestratorAgent(BaseAgent):
                 stderr=asyncio.subprocess.PIPE,
             )
             stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=60)
-        except (FileNotFoundError, asyncio.TimeoutError):
+        except (FileNotFoundError, TimeoutError):
             # FFmpeg not available (test env) — return placeholders
             return self._placeholder_frames(_TARGET_FRAMES)
 
@@ -135,7 +140,7 @@ class OrchestratorAgent(BaseAgent):
             end = data.find(EOI, start)
             if end == -1:
                 break
-            frame_bytes = data[start: end + 2]
+            frame_bytes = data[start : end + 2]
             frames.append(base64.b64encode(frame_bytes).decode())
             pos = end + 2
         return frames
@@ -161,9 +166,7 @@ class OrchestratorAgent(BaseAgent):
 
     # ── Transcription (OpenAI Whisper) ────────────────────────────────────────
 
-    async def _transcribe(
-        self, video_url: str
-    ) -> tuple[str, list[dict]]:
+    async def _transcribe(self, video_url: str) -> tuple[str, list[dict]]:
         """
         Transcribe audio from a video URL using OpenAI Whisper.
 
@@ -174,6 +177,7 @@ class OrchestratorAgent(BaseAgent):
 
         try:
             import httpx
+
             async with httpx.AsyncClient() as http:
                 resp = await http.get(video_url, timeout=30)
                 resp.raise_for_status()

@@ -17,10 +17,10 @@ Public API:
     result.key_moments         # list[str]
     result.content_rating      # "G" | "PG" | "PG-13" | "R" | "NC-17"
 """
+
 from __future__ import annotations
 
 import json
-from typing import Any
 
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -35,6 +35,7 @@ logger = structlog.get_logger(__name__)
 _MODEL = "gpt-4o-mini"
 
 # ── Output schema ─────────────────────────────────────────────────────────────
+
 
 class SummaryOutput(BaseModel):
     executive_summary: str = Field(
@@ -51,6 +52,7 @@ class SummaryOutput(BaseModel):
 
 
 # ── Chain factory ─────────────────────────────────────────────────────────────
+
 
 def _build_llm(openai_client=None) -> ChatOpenAI:
     """Build (or wrap) a ChatOpenAI instance."""
@@ -69,6 +71,7 @@ def _build_llm(openai_client=None) -> ChatOpenAI:
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
+
 
 async def run_summary_chain(
     transcript: str = "",

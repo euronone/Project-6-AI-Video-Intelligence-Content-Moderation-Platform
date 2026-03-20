@@ -1,4 +1,5 @@
 """Tests for A-06 ReportGeneratorAgent — OpenAI mocked."""
+
 import json
 from unittest.mock import AsyncMock, MagicMock
 
@@ -30,16 +31,26 @@ def _mock_client(return_value=None, side_effect=None) -> MagicMock:
 
 
 _CONTENT_ANALYSIS = {
-    "summary": "Cooking tutorial.", "topics": ["cooking"], "sentiment": "positive",
+    "summary": "Cooking tutorial.",
+    "topics": ["cooking"],
+    "sentiment": "positive",
     "language": "en",
 }
 _SAFETY_RESULT = {
-    "decision": "approved", "overall_severity": "low", "confidence": 0.96,
-    "violations": [], "policy_triggers": [], "reasoning": "Clean content.",
+    "decision": "approved",
+    "overall_severity": "low",
+    "confidence": 0.96,
+    "violations": [],
+    "policy_triggers": [],
+    "reasoning": "Clean content.",
 }
 _METADATA = {
-    "entities": [], "brands": [], "keywords": ["pasta"],
-    "ocr_text": [], "objects_detected": [], "locations": [],
+    "entities": [],
+    "brands": [],
+    "keywords": ["pasta"],
+    "ocr_text": [],
+    "objects_detected": [],
+    "locations": [],
 }
 
 
@@ -54,13 +65,15 @@ async def test_report_generation_happy_path(agent):
         "transcript_excerpt": "",
     }
     agent._client = _mock_client(return_value=_fake_response(payload))
-    result = await agent.run({
-        "video_id": "v1",
-        "content_analysis": _CONTENT_ANALYSIS,
-        "safety_result": _SAFETY_RESULT,
-        "metadata": _METADATA,
-        "scene_classifications": [{"category": "safe", "confidence": 0.99}],
-    })
+    result = await agent.run(
+        {
+            "video_id": "v1",
+            "content_analysis": _CONTENT_ANALYSIS,
+            "safety_result": _SAFETY_RESULT,
+            "metadata": _METADATA,
+            "scene_classifications": [{"category": "safe", "confidence": 0.99}],
+        }
+    )
 
     report = result["moderation_report"]
     assert report["decision"] == ModerationDecision.APPROVED.value
@@ -71,13 +84,15 @@ async def test_report_generation_happy_path(agent):
 @pytest.mark.asyncio
 async def test_report_fallback_on_api_failure(agent):
     agent._client = _mock_client(side_effect=Exception("service down"))
-    result = await agent.run({
-        "video_id": "v2",
-        "content_analysis": _CONTENT_ANALYSIS,
-        "safety_result": _SAFETY_RESULT,
-        "metadata": _METADATA,
-        "scene_classifications": [],
-    })
+    result = await agent.run(
+        {
+            "video_id": "v2",
+            "content_analysis": _CONTENT_ANALYSIS,
+            "safety_result": _SAFETY_RESULT,
+            "metadata": _METADATA,
+            "scene_classifications": [],
+        }
+    )
 
     # Fallback derives decision from safety_result
     report = result["moderation_report"]
@@ -111,13 +126,15 @@ async def test_report_includes_violations_from_safety(agent):
         "transcript_excerpt": "",
     }
     agent._client = _mock_client(return_value=_fake_response(payload))
-    result = await agent.run({
-        "video_id": "v3",
-        "content_analysis": _CONTENT_ANALYSIS,
-        "safety_result": safety_with_violations,
-        "metadata": _METADATA,
-        "scene_classifications": [],
-    })
+    result = await agent.run(
+        {
+            "video_id": "v3",
+            "content_analysis": _CONTENT_ANALYSIS,
+            "safety_result": safety_with_violations,
+            "metadata": _METADATA,
+            "scene_classifications": [],
+        }
+    )
 
     report = result["moderation_report"]
     assert report["decision"] == "rejected"

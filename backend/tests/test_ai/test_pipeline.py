@@ -4,8 +4,9 @@ End-to-end pipeline test — all OpenAI calls mocked.
 Injects mock clients directly onto the singleton agent instances that
 power the compiled LangGraph.
 """
+
 import json
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -33,17 +34,28 @@ _CONTENT_RESP = {
     "duration_seconds": 90.0,
 }
 _META_RESP = {
-    "entities": ["Chef John"], "brands": [], "keywords": ["pasta"],
-    "ocr_text": [], "objects_detected": ["pan", "knife"], "locations": [],
+    "entities": ["Chef John"],
+    "brands": [],
+    "keywords": ["pasta"],
+    "ocr_text": [],
+    "objects_detected": ["pan", "knife"],
+    "locations": [],
 }
 _SAFETY_RESP = {
-    "decision": "approved", "overall_severity": "low", "confidence": 0.97,
-    "reasoning": "No issues.", "violations": [], "policy_triggers": [],
+    "decision": "approved",
+    "overall_severity": "low",
+    "confidence": 0.97,
+    "reasoning": "No issues.",
+    "violations": [],
+    "policy_triggers": [],
 }
 _REPORT_RESP = {
-    "decision": "approved", "overall_severity": "low", "confidence": 0.97,
+    "decision": "approved",
+    "overall_severity": "low",
+    "confidence": 0.97,
     "content_summary": "Educational cooking video about pasta.",
-    "policy_triggers": [], "transcript_excerpt": "",
+    "policy_triggers": [],
+    "transcript_excerpt": "",
 }
 
 
@@ -71,8 +83,12 @@ def _make_shared_mock() -> MagicMock:
 def _inject_mock(mock_client: MagicMock) -> None:
     """Set mock client on all singleton agents in the graph module."""
     for attr in (
-        "_orchestrator", "_content_analyzer", "_scene_classifier",
-        "_metadata_extractor", "_safety_checker", "_report_generator",
+        "_orchestrator",
+        "_content_analyzer",
+        "_scene_classifier",
+        "_metadata_extractor",
+        "_safety_checker",
+        "_report_generator",
     ):
         agent = getattr(graph_module, attr)
         agent._client = mock_client
@@ -99,18 +115,28 @@ async def test_full_pipeline_approved():
 @pytest.mark.asyncio
 async def test_pipeline_with_rejected_content():
     safety_rejected = {
-        "decision": "rejected", "overall_severity": "high", "confidence": 0.88,
-        "reasoning": "Violence detected.", "violations": [
+        "decision": "rejected",
+        "overall_severity": "high",
+        "confidence": 0.88,
+        "reasoning": "Violence detected.",
+        "violations": [
             {
-                "category": "violence", "severity": "high", "timestamp": 5.0,
-                "confidence": 0.88, "description": "Fight", "frame_index": 0,
+                "category": "violence",
+                "severity": "high",
+                "timestamp": 5.0,
+                "confidence": 0.88,
+                "description": "Fight",
+                "frame_index": 0,
             }
         ],
         "policy_triggers": ["no_violence"],
     }
     report_rejected = {
-        "decision": "rejected", "overall_severity": "high", "confidence": 0.88,
-        "content_summary": "Video with violence.", "policy_triggers": ["no_violence"],
+        "decision": "rejected",
+        "overall_severity": "high",
+        "confidence": 0.88,
+        "content_summary": "Video with violence.",
+        "policy_triggers": ["no_violence"],
         "transcript_excerpt": "",
     }
     responses = [
@@ -151,7 +177,7 @@ async def test_pipeline_no_frames_no_transcript():
 
     report = await run_video_analysis(
         video_id="test-video-003",
-        video_url="",   # empty URL → orchestrator yields placeholder frames
+        video_url="",  # empty URL → orchestrator yields placeholder frames
     )
 
     assert isinstance(report, ModerationReport)

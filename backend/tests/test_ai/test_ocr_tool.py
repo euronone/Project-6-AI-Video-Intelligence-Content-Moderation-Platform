@@ -1,4 +1,5 @@
 """Tests for T-03 OCRTool — OpenAI client mocked."""
+
 from __future__ import annotations
 
 import json
@@ -8,8 +9,8 @@ import pytest
 
 from app.ai.tools.ocr_tool import OCRResult, run_ocr
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _mock_client(payload: dict | None = None, side_effect=None) -> MagicMock:
     msg = MagicMock()
@@ -20,9 +21,7 @@ def _mock_client(payload: dict | None = None, side_effect=None) -> MagicMock:
     resp.choices = [choice]
 
     client = MagicMock()
-    client.chat.completions.create = AsyncMock(
-        return_value=resp, side_effect=side_effect
-    )
+    client.chat.completions.create = AsyncMock(return_value=resp, side_effect=side_effect)
     return client
 
 
@@ -30,6 +29,7 @@ _FAKE_FRAME = "aGVsbG8="  # base64("hello")
 
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_ocr_happy_path():

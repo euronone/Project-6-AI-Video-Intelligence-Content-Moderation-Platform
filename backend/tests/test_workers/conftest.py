@@ -5,6 +5,7 @@ cv2 (OpenCV) may not be available in all test environments. Pre-registering
 a MagicMock in sys.modules ensures worker tests that import app.ai.tools
 do not fail on the OpenCV binary bootstrap.
 """
+
 import sys
 from unittest.mock import MagicMock
 

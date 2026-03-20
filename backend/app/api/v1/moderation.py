@@ -2,14 +2,14 @@
 Moderation API — B-03
 Queue management, AI result retrieval, human review, and admin override.
 """
+
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Annotated
 
 import structlog
-from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy import select
-from sqlalchemy import func
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AdminUser, CurrentUser, OperatorUser
@@ -29,13 +29,13 @@ from app.schemas.moderation import (
     PaginatedQueue,
     SubmitReviewRequest,
 )
-from app.schemas.auth import MessageResponse
 
 router = APIRouter(prefix="/moderation", tags=["moderation"])
 logger = structlog.get_logger(__name__)
 
 
 # ── GET /moderation/queue ─────────────────────────────────────────────────────
+
 
 @router.get(
     "/queue",
@@ -47,7 +47,7 @@ async def list_queue(
     db: Annotated[AsyncSession, Depends(get_db)],
     page: int = Query(1, ge=1),
     page_size: int = Query(settings.DEFAULT_PAGE_SIZE, ge=1, le=settings.MAX_PAGE_SIZE),
-    status_filter: ModerationStatus | None = Query(None, alias="status"),
+    status_filter: ModerationStatus | None = Query(None, alias="status"),  # noqa: B008
 ) -> PaginatedQueue:
     base_query = select(ModerationQueueItem)
     if current_user.tenant_id:
@@ -59,8 +59,9 @@ async def list_queue(
     total = count_result.scalar_one()
 
     result = await db.execute(
-        base_query
-        .order_by(ModerationQueueItem.priority.desc(), ModerationQueueItem.created_at.asc())
+        base_query.order_by(
+            ModerationQueueItem.priority.desc(), ModerationQueueItem.created_at.asc()
+        )
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
@@ -88,6 +89,7 @@ async def list_queue(
 
 # ── GET /moderation/videos/{video_id} ────────────────────────────────────────
 
+
 @router.get(
     "/videos/{video_id}",
     response_model=ModerationResultResponse,
@@ -98,9 +100,7 @@ async def get_moderation_result(
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ModerationResultResponse:
-    result = await db.execute(
-        select(ModerationResult).where(ModerationResult.video_id == video_id)
-    )
+    result = await db.execute(select(ModerationResult).where(ModerationResult.video_id == video_id))
     moderation = result.scalar_one_or_none()
     if not moderation:
         raise NotFoundError("ModerationResult", str(video_id))
@@ -109,6 +109,7 @@ async def get_moderation_result(
 
 
 # ── POST /moderation/{moderation_id}/review ───────────────────────────────────
+
 
 @router.post(
     "/{moderation_id}/review",
@@ -121,9 +122,7 @@ async def submit_review(
     current_user: OperatorUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ModerationResultResponse:
-    result = await db.execute(
-        select(ModerationResult).where(ModerationResult.id == moderation_id)
-    )
+    result = await db.execute(select(ModerationResult).where(ModerationResult.id == moderation_id))
     moderation = result.scalar_one_or_none()
     if not moderation:
         raise NotFoundError("ModerationResult", str(moderation_id))
@@ -138,13 +137,11 @@ async def submit_review(
     moderation.reviewed_by = current_user.id
     moderation.review_action = body.action
     moderation.review_notes = body.notes
-    moderation.reviewed_at = datetime.now(timezone.utc).isoformat()
+    moderation.reviewed_at = datetime.now(UTC).isoformat()
 
     # Update queue item status too
     queue_result = await db.execute(
-        select(ModerationQueueItem).where(
-            ModerationQueueItem.moderation_result_id == moderation_id
-        )
+        select(ModerationQueueItem).where(ModerationQueueItem.moderation_result_id == moderation_id)
     )
     queue_item = queue_result.scalar_one_or_none()
     if queue_item:
@@ -162,6 +159,7 @@ async def submit_review(
 
 # ── PUT /moderation/{moderation_id}/override ─────────────────────────────────
 
+
 @router.put(
     "/{moderation_id}/override",
     response_model=ModerationResultResponse,
@@ -173,16 +171,14 @@ async def override_decision(
     current_user: AdminUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ModerationResultResponse:
-    result = await db.execute(
-        select(ModerationResult).where(ModerationResult.id == moderation_id)
-    )
+    result = await db.execute(select(ModerationResult).where(ModerationResult.id == moderation_id))
     moderation = result.scalar_one_or_none()
     if not moderation:
         raise NotFoundError("ModerationResult", str(moderation_id))
 
     moderation.override_by = current_user.id
     moderation.override_decision = body.decision
-    moderation.override_at = datetime.now(timezone.utc).isoformat()
+    moderation.override_at = datetime.now(UTC).isoformat()
 
     logger.info(
         "decision_overridden",

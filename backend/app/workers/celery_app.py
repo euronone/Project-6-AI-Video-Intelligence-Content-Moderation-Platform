@@ -11,10 +11,11 @@ Usage:
 Worker startup:
     celery -A app.workers.celery_app worker --queues video,moderation,analytics,cleanup
 """
+
 from __future__ import annotations
 
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
 
 import structlog
 from celery import Celery
@@ -34,22 +35,18 @@ celery_app.conf.update(
     # Broker & backend
     broker_url=settings.CELERY_BROKER_URL,
     result_backend=settings.CELERY_RESULT_BACKEND,
-
     # Serialisation
     task_serializer="json",
     result_serializer="json",
     accept_content=["json"],
     timezone="UTC",
     enable_utc=True,
-
     # Reliability
     task_acks_late=True,
     task_reject_on_worker_lost=True,
-
     # Default retry policy
     task_max_retries=3,
     task_default_retry_delay=60,  # seconds
-
     # Task routing: each domain gets its own queue
     task_routes={
         "app.workers.video_tasks.*": {"queue": "video"},
@@ -57,7 +54,6 @@ celery_app.conf.update(
         "app.workers.analytics_tasks.*": {"queue": "analytics"},
         "app.workers.cleanup_tasks.*": {"queue": "cleanup"},
     },
-
     # Result expiry (24 h)
     result_expires=86_400,
 )
@@ -99,6 +95,7 @@ def sync_session() -> Generator[Session, None, None]:
 
 
 # ── Structured logging signals ─────────────────────────────────────────────────
+
 
 @task_prerun.connect
 def _on_task_prerun(task_id: str, task, args, kwargs, **_kw) -> None:

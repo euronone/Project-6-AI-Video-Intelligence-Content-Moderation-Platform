@@ -1,5 +1,8 @@
 """Tests for AI schemas — validation and serialisation."""
+
 import pytest
+from pydantic import ValidationError
+
 from app.ai.schemas import (
     ContentAnalysisResult,
     ModerationDecision,
@@ -13,12 +16,12 @@ from app.ai.schemas import (
 
 
 def test_violation_confidence_bounds():
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         Violation(
             category=SceneCategory.VIOLENCE,
             severity=ViolationSeverity.HIGH,
             timestamp=1.0,
-            confidence=1.5,   # > 1.0 — should fail
+            confidence=1.5,  # > 1.0 — should fail
             description="test",
         )
 

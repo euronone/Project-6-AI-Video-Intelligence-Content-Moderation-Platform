@@ -14,11 +14,12 @@ Public API:
     await service.update_video(video_id, owner_id, body)                  -> VideoResponse
     await service.delete_video(video_id, operator_id)                     -> None
 """
+
 from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -27,7 +28,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.exceptions import ForbiddenError, NotFoundError
-from app.models.user import User
 from app.models.video import Video, VideoStatus
 from app.schemas.video import (
     PaginatedVideos,
@@ -51,12 +51,12 @@ def _build_video_response(video: Video, storage: StorageService | None = None) -
         except (json.JSONDecodeError, TypeError):
             tags = None
 
-    s3_url: str | None = None
+    _s3_url: str | None = None
     if storage and video.s3_key:
         try:
-            s3_url = storage.presigned_get_url(video.s3_key)
+            _s3_url = storage.presigned_get_url(video.s3_key)
         except Exception:
-            s3_url = None
+            _s3_url = None
 
     return VideoResponse(
         id=video.id,
@@ -208,6 +208,7 @@ class VideoService:
 
         # Enqueue processing pipeline
         from app.workers.video_tasks import process_video
+
         process_video.delay(str(video.id), body.s3_key, policy_rules or [])
 
         logger.info("video_registered", video_id=str(video.id), owner_id=str(owner_id))
@@ -319,10 +320,11 @@ class VideoService:
         if not video:
             raise NotFoundError("Video", str(video_id))
 
-        video.deleted_at = datetime.now(timezone.utc).isoformat()
+        video.deleted_at = datetime.now(UTC).isoformat()
         video.status = VideoStatus.DELETED
 
         from app.workers.cleanup_tasks import cleanup_temp_frames_task
+
         cleanup_temp_frames_task.delay(str(video_id))
 
         logger.info("video_soft_deleted", video_id=str(video_id), operator_id=str(operator_id))

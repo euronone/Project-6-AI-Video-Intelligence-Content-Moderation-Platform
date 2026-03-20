@@ -13,6 +13,7 @@ Public entry points:
     dispatch_webhooks_task.delay(event, payload)
     enqueue_human_review_task.delay(video_id, moderation_result_id, priority)
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -20,7 +21,7 @@ import hashlib
 import hmac
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -42,6 +43,7 @@ _WEBHOOK_TIMEOUT_SECONDS = 10
 
 
 # ── W-03-A: Run / re-run moderation workflow ───────────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -88,7 +90,7 @@ def run_moderation_task(
         )
     except Exception as exc:
         logger.error("run_moderation_task_error", video_id=video_id, error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
     _DECISION_TO_STATUS: dict[str, ModerationStatus] = {
         "approved": ModerationStatus.APPROVED,
@@ -107,7 +109,7 @@ def run_moderation_task(
         if mod:
             mod.status = new_status
             mod.overall_confidence = result.confidence
-            mod.updated_at = datetime.now(timezone.utc)
+            mod.updated_at = datetime.now(UTC)
 
     logger.info(
         "run_moderation_task_done",
@@ -119,6 +121,7 @@ def run_moderation_task(
 
 
 # ── W-03-B: Apply policy rules ─────────────────────────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -162,7 +165,11 @@ def apply_policy_task(
                     moderation_result_id=moderation_result_id,
                     policy_id=policy_id,
                 )
-                return {"moderation_result_id": moderation_result_id, "new_status": "not_found", "policy_id": policy_id}
+                return {
+                    "moderation_result_id": moderation_result_id,
+                    "new_status": "not_found",
+                    "policy_id": policy_id,
+                }
 
             violations: list[dict] = mod.violations or []
             rules: list[dict] = policy.rules or []
@@ -187,7 +194,7 @@ def apply_policy_task(
 
             if new_status != mod.status:
                 mod.status = new_status
-                mod.updated_at = datetime.now(timezone.utc)
+                mod.updated_at = datetime.now(UTC)
 
         logger.info(
             "apply_policy_task_done",
@@ -202,10 +209,11 @@ def apply_policy_task(
 
     except Exception as exc:
         logger.error("apply_policy_task_error", error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 # ── W-03-C: Dispatch outbound webhooks ────────────────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -252,9 +260,7 @@ def dispatch_webhooks_task(
         headers: dict[str, str] = {"Content-Type": "application/json", "X-VidShield-Event": event}
 
         if endpoint.secret:
-            sig = hmac.new(
-                endpoint.secret.encode("utf-8"), body, hashlib.sha256
-            ).hexdigest()
+            sig = hmac.new(endpoint.secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
             headers["X-VidShield-Signature"] = f"sha256={sig}"
 
         try:
@@ -268,7 +274,7 @@ def dispatch_webhooks_task(
                 ep = db.get(WebhookEndpoint, endpoint.id)
                 if ep:
                     ep.total_deliveries += 1
-                    ep.last_delivery_at = datetime.now(timezone.utc).isoformat()
+                    ep.last_delivery_at = datetime.now(UTC).isoformat()
                     ep.last_status_code = resp.status_code
                     if not resp.is_success:
                         ep.failed_deliveries += 1
@@ -279,7 +285,7 @@ def dispatch_webhooks_task(
             logger.warning(
                 "dispatch_webhooks_delivery_failed",
                 url=endpoint.url,
-                event=event,
+                webhook_event=event,
                 error=str(exc),
             )
             with sync_session() as db:
@@ -305,6 +311,7 @@ def dispatch_webhooks_task(
 
 
 # ── W-03-D: Enqueue human review ──────────────────────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -372,4 +379,4 @@ def enqueue_human_review_task(
 
     except Exception as exc:
         logger.error("enqueue_human_review_task_error", video_id=video_id, error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc

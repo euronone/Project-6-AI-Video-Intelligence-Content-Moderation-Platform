@@ -13,13 +13,14 @@ Public API:
     await service.test_webhook(endpoint_id)                    -> str  (status message)
           service.dispatch_event(event, payload, tenant_id)    -> None  (enqueues Celery task)
 """
+
 from __future__ import annotations
 
 import hashlib
 import hmac
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -208,7 +209,7 @@ class NotificationService:
 
         payload_dict: dict[str, Any] = {
             "event": "test",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "endpoint_id": str(endpoint_id),
         }
         payload_bytes = json.dumps(payload_dict).encode()
@@ -225,7 +226,7 @@ class NotificationService:
                 response = await http.post(endpoint.url, content=payload_bytes, headers=headers)
 
             endpoint.total_deliveries += 1
-            endpoint.last_delivery_at = datetime.now(timezone.utc).isoformat()
+            endpoint.last_delivery_at = datetime.now(UTC).isoformat()
             endpoint.last_status_code = response.status_code
             if response.status_code >= 400:
                 endpoint.failed_deliveries += 1
@@ -262,5 +263,6 @@ class NotificationService:
             tenant_id: Optional tenant scope — only deliver to matching endpoints.
         """
         from app.workers.moderation_tasks import dispatch_webhooks_task
+
         dispatch_webhooks_task.delay(event=event, payload=payload, tenant_id=tenant_id)
         logger.info("webhook_event_dispatched", webhook_event=event, tenant_id=tenant_id)

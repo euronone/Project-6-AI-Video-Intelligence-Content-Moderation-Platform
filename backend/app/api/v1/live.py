@@ -2,26 +2,26 @@
 Live Stream API — B-05
 Stream registration, management, and real-time WebSocket events.
 """
+
+import contextlib
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Annotated
 
 import structlog
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect, status
+from jose import JWTError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, OperatorUser
 from app.config import settings
-from app.core.exceptions import ForbiddenError, NotFoundError, UnauthorizedError
+from app.core.exceptions import NotFoundError
 from app.core.security import decode_token
-from app.dependencies import get_db, get_redis
+from app.dependencies import get_db
 from app.models.alert import LiveStream, StreamStatus
 from app.schemas.live import MessageResponse, StreamCreate, StreamListResponse, StreamResponse
-
-import redis.asyncio as aioredis
-from jose import JWTError
 
 router = APIRouter(prefix="/live", tags=["live"])
 logger = structlog.get_logger(__name__)
@@ -31,6 +31,7 @@ _ws_connections: dict[str, list[WebSocket]] = {}
 
 
 # ── GET /live/streams ─────────────────────────────────────────────────────────
+
 
 @router.get("/streams", response_model=StreamListResponse, summary="List active live streams")
 async def list_streams(
@@ -57,6 +58,7 @@ async def list_streams(
 
 
 # ── POST /live/streams ────────────────────────────────────────────────────────
+
 
 @router.post(
     "/streams",
@@ -90,6 +92,7 @@ async def create_stream(
 
 # ── GET /live/streams/{id} ────────────────────────────────────────────────────
 
+
 @router.get(
     "/streams/{stream_id}",
     response_model=StreamResponse,
@@ -110,6 +113,7 @@ async def get_stream(
 
 # ── POST /live/streams/{id}/stop ──────────────────────────────────────────────
 
+
 @router.post(
     "/streams/{stream_id}/stop",
     response_model=MessageResponse,
@@ -126,17 +130,15 @@ async def stop_stream(
         raise NotFoundError("LiveStream", str(stream_id))
 
     stream.status = StreamStatus.STOPPED
-    stream.stopped_at = datetime.now(timezone.utc).isoformat()
+    stream.stopped_at = datetime.now(UTC).isoformat()
 
     # Notify connected WebSocket clients
     sid = str(stream_id)
     if sid in _ws_connections:
         payload = json.dumps({"event": "stream.stopped", "stream_id": sid})
         for ws in _ws_connections[sid]:
-            try:
+            with contextlib.suppress(Exception):
                 await ws.send_text(payload)
-            except Exception:
-                pass
 
     logger.info("stream_stopped", stream_id=str(stream_id))
     return MessageResponse(message="Stream stopped successfully.")
@@ -144,12 +146,13 @@ async def stop_stream(
 
 # ── WS /live/ws/streams/{id} ──────────────────────────────────────────────────
 
+
 @router.websocket("/ws/streams/{stream_id}")
 async def websocket_stream(
     stream_id: str,
     websocket: WebSocket,
     token: str = Query(..., description="JWT access token"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ) -> None:
     """
     WebSocket endpoint for real-time stream events.
@@ -183,7 +186,5 @@ async def websocket_stream(
         logger.info("ws_client_disconnected", stream_id=sid)
     finally:
         if sid in _ws_connections:
-            try:
+            with contextlib.suppress(ValueError):
                 _ws_connections[sid].remove(websocket)
-            except ValueError:
-                pass

@@ -93,11 +93,21 @@ docker-compose.override.yml
 # ────────────────────────────────────────────────────────────
 # Terraform
 # ────────────────────────────────────────────────────────────
+# Provider/plugin cache directories (any depth under terraform/)
+terraform/**/.terraform/
 terraform/.terraform/
+# Dependency lock files — not committed; regenerated per environment
+terraform/**/.terraform.lock.hcl
 terraform/.terraform.lock.hcl
+# State files — always in remote backend (S3), never local
 terraform/*.tfstate
 terraform/*.tfstate.*
 terraform/*.tfstate.backup
+terraform/**/*.tfstate
+terraform/**/*.tfstate.*
+terraform/**/*.tfstate.backup
+# Generated plan files
+*.tfplan
 terraform/crash.log
 terraform/override.tf
 terraform/override.tf.json
@@ -105,6 +115,8 @@ terraform/*_override.tf
 terraform/*_override.tf.json
 terraform/.terraformrc
 terraform/terraform.rc
+# NOTE: terraform/environments/*.tfvars ARE tracked (no secrets, only sizes/config)
+# Secrets must be passed via TF_VAR_* env vars or AWS Secrets Manager
 
 # ────────────────────────────────────────────────────────────
 # IDE & editors

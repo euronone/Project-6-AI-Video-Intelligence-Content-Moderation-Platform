@@ -11,19 +11,20 @@ Public API:
     await service.refresh_tokens(body)    -> TokenPair
     await service.logout(refresh_token)   -> None
 """
+
 from __future__ import annotations
 
+import uuid
 from datetime import timedelta
 
+import redis.asyncio as aioredis
 import structlog
 from jose import JWTError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import redis.asyncio as aioredis
-
 from app.config import settings
-from app.core.exceptions import ConflictError, NotFoundError, UnauthorizedError
+from app.core.exceptions import ConflictError, UnauthorizedError
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -102,7 +103,7 @@ class AuthService:
             LoginResponse with the user and a fresh token pair.
         """
         result = await self._db.execute(
-            select(User).where(User.email == email, User.is_active == True)
+            select(User).where(User.email == email, User.is_active.is_(True))
         )
         user = result.scalar_one_or_none()
 
@@ -127,12 +128,10 @@ class AuthService:
         Returns:
             New TokenPair.
         """
-        import uuid as _uuid
-
         try:
             payload = decode_token(refresh_token)
-        except JWTError:
-            raise UnauthorizedError("Invalid or expired refresh token.")
+        except JWTError as err:
+            raise UnauthorizedError("Invalid or expired refresh token.") from err
 
         if payload.get("type") != "refresh":
             raise UnauthorizedError("Invalid token type.")
@@ -144,8 +143,8 @@ class AuthService:
 
         result = await self._db.execute(
             select(User).where(
-                User.id == _uuid.UUID(stored_user_id),
-                User.is_active == True,
+                User.id == uuid.UUID(stored_user_id),
+                User.is_active.is_(True),
             )
         )
         user = result.scalar_one_or_none()

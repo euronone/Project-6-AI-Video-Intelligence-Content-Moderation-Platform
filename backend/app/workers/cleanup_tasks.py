@@ -26,9 +26,10 @@ Schedule example (Celery Beat):
         },
     }
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import boto3
@@ -50,6 +51,7 @@ _TEMP_FRAMES_PREFIX = "temp/frames/"
 
 
 # ── W-05-A: Delete temp frame artifacts from S3 ───────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -75,7 +77,7 @@ def cleanup_temp_frames_task(
     """
     logger.info("cleanup_temp_frames_start", ttl_hours=ttl_hours)
 
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=ttl_hours)
+    cutoff = datetime.now(UTC) - timedelta(hours=ttl_hours)
     deleted = errors = 0
 
     try:
@@ -111,13 +113,14 @@ def cleanup_temp_frames_task(
 
     except Exception as exc:
         logger.error("cleanup_temp_frames_error", error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
     logger.info("cleanup_temp_frames_done", deleted=deleted, errors=errors)
     return {"deleted": deleted, "errors": errors}
 
 
 # ── W-05-B: Purge stale jobs ──────────────────────────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -141,7 +144,7 @@ def purge_stale_jobs_task(
     """
     logger.info("purge_stale_jobs_start", stale_hours=stale_hours)
 
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=stale_hours)
+    cutoff = datetime.now(UTC) - timedelta(hours=stale_hours)
     marked_failed = 0
 
     try:
@@ -159,18 +162,19 @@ def purge_stale_jobs_task(
                 video.error_message = (
                     f"Processing timed out after {stale_hours}h — marked failed by cleanup task."
                 )
-                video.updated_at = datetime.now(timezone.utc)
+                video.updated_at = datetime.now(UTC)
                 marked_failed += 1
 
     except Exception as exc:
         logger.error("purge_stale_jobs_error", error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
     logger.info("purge_stale_jobs_done", marked_failed=marked_failed)
     return {"marked_failed": marked_failed}
 
 
 # ── W-05-C: Prune old analytics events ───────────────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -193,7 +197,7 @@ def prune_old_analytics_events_task(
     """
     logger.info("prune_old_analytics_events_start", retention_days=retention_days)
 
-    cutoff_date = (datetime.now(timezone.utc) - timedelta(days=retention_days)).date().isoformat()
+    cutoff_date = (datetime.now(UTC) - timedelta(days=retention_days)).date().isoformat()
     deleted = 0
 
     try:
@@ -206,13 +210,14 @@ def prune_old_analytics_events_task(
 
     except Exception as exc:
         logger.error("prune_old_analytics_events_error", error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
     logger.info("prune_old_analytics_events_done", deleted=deleted, cutoff_date=cutoff_date)
     return {"deleted": deleted}
 
 
 # ── W-05-D: Clean up orphaned S3 objects ──────────────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -241,7 +246,7 @@ def cleanup_orphaned_s3_objects_task(
     """
     logger.info("cleanup_orphaned_s3_start", prefix=prefix, min_age_hours=min_age_hours)
 
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=min_age_hours)
+    cutoff = datetime.now(UTC) - timedelta(hours=min_age_hours)
     scanned = deleted = errors = 0
 
     try:
@@ -264,11 +269,7 @@ def cleanup_orphaned_s3_objects_task(
 
                 s3_key = obj["Key"]
                 with sync_session() as db:
-                    exists = (
-                        db.query(Video)
-                        .filter(Video.s3_key == s3_key)
-                        .first()
-                    )
+                    exists = db.query(Video).filter(Video.s3_key == s3_key).first()
                 if not exists:
                     orphan_keys.append({"Key": s3_key})
 
@@ -285,7 +286,7 @@ def cleanup_orphaned_s3_objects_task(
 
     except Exception as exc:
         logger.error("cleanup_orphaned_s3_error", error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
     logger.info(
         "cleanup_orphaned_s3_done",

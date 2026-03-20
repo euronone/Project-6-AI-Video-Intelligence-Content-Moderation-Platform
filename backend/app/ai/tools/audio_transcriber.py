@@ -14,6 +14,7 @@ Public API:
     result.language    # str  detected/provided language code
     result.error       # str | None  set on failure; pipeline continues
 """
+
 from __future__ import annotations
 
 import os
@@ -34,6 +35,7 @@ _WHISPER_MODEL = "whisper-1"
 
 # ── Output schemas ────────────────────────────────────────────────────────────
 
+
 class TranscriptSegment(BaseModel):
     start: float
     end: float
@@ -49,11 +51,13 @@ class TranscriptResult(BaseModel):
 
 # ── Errors ────────────────────────────────────────────────────────────────────
 
+
 class AudioTranscriptionError(RuntimeError):
     pass
 
 
 # ── FFmpeg helper ─────────────────────────────────────────────────────────────
+
 
 def _extract_audio_ffmpeg(video_path: str, output_wav: str) -> None:
     """
@@ -64,12 +68,16 @@ def _extract_audio_ffmpeg(video_path: str, output_wav: str) -> None:
     """
     cmd = [
         "ffmpeg",
-        "-y",            # overwrite output if it exists
-        "-i", video_path,
-        "-vn",           # drop video stream
-        "-ar", "16000",  # 16 kHz — Whisper optimal sample rate
-        "-ac", "1",      # mono
-        "-f", "wav",
+        "-y",  # overwrite output if it exists
+        "-i",
+        video_path,
+        "-vn",  # drop video stream
+        "-ar",
+        "16000",  # 16 kHz — Whisper optimal sample rate
+        "-ac",
+        "1",  # mono
+        "-f",
+        "wav",
         output_wav,
     ]
     result = subprocess.run(cmd, capture_output=True, timeout=120, check=False)
@@ -79,6 +87,7 @@ def _extract_audio_ffmpeg(video_path: str, output_wav: str) -> None:
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
+
 
 async def transcribe_audio(
     video_path: str,
@@ -137,9 +146,7 @@ async def transcribe_audio(
             for seg in raw_segments
         ]
 
-        detected_language: str = (
-            getattr(response, "language", None) or language or "en"
-        )
+        detected_language: str = getattr(response, "language", None) or language or "en"
 
         logger.info(
             "audio_transcriber_done",

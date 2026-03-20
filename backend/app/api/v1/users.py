@@ -6,8 +6,9 @@ POST   /users          create a user
 PATCH  /users/{id}     update name / role / password / is_active
 DELETE /users/{id}     remove a user (cannot remove yourself)
 """
-from typing import Annotated
+
 import uuid
+from typing import Annotated
 
 import structlog
 from fastapi import APIRouter, Depends, status
@@ -19,7 +20,13 @@ from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError, Un
 from app.core.security import hash_password, verify_password
 from app.dependencies import get_db
 from app.models.user import User
-from app.schemas.user import ChangeOwnPasswordRequest, UserCreate, UserListResponse, UserResponse, UserUpdate
+from app.schemas.user import (
+    ChangeOwnPasswordRequest,
+    UserCreate,
+    UserListResponse,
+    UserResponse,
+    UserUpdate,
+)
 
 router = APIRouter(prefix="/users", tags=["users"])
 logger = structlog.get_logger(__name__)
