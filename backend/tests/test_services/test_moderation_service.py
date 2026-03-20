@@ -1,4 +1,5 @@
 """Tests for S-03 ModerationService — DB mocked."""
+
 from __future__ import annotations
 
 import uuid
@@ -8,7 +9,6 @@ import pytest
 
 from app.core.exceptions import NotFoundError
 from app.models.moderation import ModerationStatus, ReviewAction
-
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -66,6 +66,7 @@ def _make_db(moderation=None, queue_item=None, total=0):
 
 # ── get_result ─────────────────────────────────────────────────────────────────
 
+
 class TestGetResult:
     @pytest.mark.asyncio
     async def test_returns_result_when_found(self):
@@ -77,7 +78,7 @@ class TestGetResult:
         with patch("app.services.moderation_service.ModerationResultResponse") as MockResp:
             MockResp.model_validate.return_value = MagicMock(id=moderation.id)
             service = ModerationService(db=db)
-            result = await service.get_result(_VIDEO_ID)
+            await service.get_result(_VIDEO_ID)
 
         MockResp.model_validate.assert_called_once_with(moderation)
 
@@ -92,6 +93,7 @@ class TestGetResult:
 
 
 # ── submit_review ──────────────────────────────────────────────────────────────
+
 
 class TestSubmitReview:
     @pytest.mark.asyncio
@@ -132,6 +134,7 @@ class TestSubmitReview:
 
 # ── override_decision ──────────────────────────────────────────────────────────
 
+
 class TestOverrideDecision:
     @pytest.mark.asyncio
     async def test_sets_override_fields(self):
@@ -168,6 +171,7 @@ class TestOverrideDecision:
 
 
 # ── trigger_remoderation ───────────────────────────────────────────────────────
+
 
 class TestTriggerRemoderation:
     @pytest.mark.asyncio

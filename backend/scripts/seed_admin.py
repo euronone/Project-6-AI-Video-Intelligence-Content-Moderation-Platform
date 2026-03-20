@@ -8,6 +8,7 @@ Usage (from the backend/ directory):
 Environment variables are read from the .env file (or the shell environment).
 Run AFTER 'alembic upgrade head'.
 """
+
 import asyncio
 import os
 import sys
@@ -16,12 +17,11 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.config import settings
 from app.core.security import hash_password
 from app.models.user import User, UserRole
-
 
 SEED_USERS = [
     {
@@ -47,9 +47,7 @@ async def seed() -> None:
 
     async with session_factory() as session:
         for data in SEED_USERS:
-            existing = await session.execute(
-                select(User).where(User.email == data["email"])
-            )
+            existing = await session.execute(select(User).where(User.email == data["email"]))
             if existing.scalar_one_or_none():
                 print(f"  [skip]   {data['email']} already exists")
                 continue

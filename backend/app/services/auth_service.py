@@ -11,6 +11,7 @@ Public API:
     await service.refresh_tokens(body)    -> TokenPair
     await service.logout(refresh_token)   -> None
 """
+
 from __future__ import annotations
 
 import uuid
@@ -102,7 +103,7 @@ class AuthService:
             LoginResponse with the user and a fresh token pair.
         """
         result = await self._db.execute(
-            select(User).where(User.email == email, User.is_active == True)
+            select(User).where(User.email == email, User.is_active.is_(True))
         )
         user = result.scalar_one_or_none()
 
@@ -143,7 +144,7 @@ class AuthService:
         result = await self._db.execute(
             select(User).where(
                 User.id == uuid.UUID(stored_user_id),
-                User.is_active == True,
+                User.is_active.is_(True),
             )
         )
         user = result.scalar_one_or_none()

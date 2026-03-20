@@ -1,4 +1,5 @@
 """Tests for S-05 StorageService — boto3 client mocked."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
@@ -11,7 +12,9 @@ class TestStorageService:
     def _make_service(self, mock_client=None):
         from app.services.storage_service import StorageService
 
-        with patch("app.services.storage_service.boto3.client", return_value=mock_client or MagicMock()):
+        with patch(
+            "app.services.storage_service.boto3.client", return_value=mock_client or MagicMock()
+        ):
             return StorageService(
                 bucket="test-bucket",
                 region="us-east-1",
@@ -57,7 +60,9 @@ class TestStorageService:
         mock_client = MagicMock()
         service = self._make_service(mock_client)
         service.delete_object("videos/old.mp4")
-        mock_client.delete_object.assert_called_once_with(Bucket="test-bucket", Key="videos/old.mp4")
+        mock_client.delete_object.assert_called_once_with(
+            Bucket="test-bucket", Key="videos/old.mp4"
+        )
 
     # ── object_exists ──────────────────────────────────────────────────────────
 
@@ -86,6 +91,7 @@ class TestStorageService:
 
     def test_upload_fileobj_calls_boto3(self):
         import io
+
         mock_client = MagicMock()
         service = self._make_service(mock_client)
         fileobj = io.BytesIO(b"video data")

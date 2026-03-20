@@ -11,6 +11,7 @@ Public API:
     await service.override_decision(moderation_id, admin_id, body)      -> ModerationResultResponse
     await service.trigger_remoderation(video_id, policy_rules)          -> dict
 """
+
 from __future__ import annotations
 
 import uuid
@@ -85,8 +86,9 @@ class ModerationService:
         total = count_result.scalar_one()
 
         result = await self._db.execute(
-            base_query
-            .order_by(ModerationQueueItem.priority.desc(), ModerationQueueItem.created_at.asc())
+            base_query.order_by(
+                ModerationQueueItem.priority.desc(), ModerationQueueItem.created_at.asc()
+            )
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
@@ -245,6 +247,7 @@ class ModerationService:
         violations = moderation.violations or [] if moderation else []
 
         from app.workers.moderation_tasks import run_moderation_task
+
         task = run_moderation_task.delay(
             video_id=str(video_id),
             policy_rules=policy_rules or [],

@@ -1,4 +1,5 @@
 """Tests for D-07 Alembic migration structure."""
+
 from __future__ import annotations
 
 import pytest
@@ -21,12 +22,12 @@ class TestMigrationStructure:
             "webhook_endpoints",
         }
         # Import all models to ensure they register with Base
-        import app.models.user  # noqa: F401
-        import app.models.video  # noqa: F401
+        import app.models.alert  # noqa: F401
+        import app.models.analytics  # noqa: F401
         import app.models.moderation  # noqa: F401
         import app.models.policy  # noqa: F401
-        import app.models.analytics  # noqa: F401
-        import app.models.alert  # noqa: F401
+        import app.models.user  # noqa: F401
+        import app.models.video  # noqa: F401
         import app.models.webhook  # noqa: F401
 
         actual_tables = set(Base.metadata.tables.keys())
@@ -64,7 +65,7 @@ class TestMigrationStructure:
     @pytest.mark.asyncio
     async def test_schema_created_from_metadata(self, db_session):
         """Verify SQLite can create all tables from Base.metadata (smoke test)."""
-        from sqlalchemy import inspect, text
+        from sqlalchemy import text
 
         # Tables are already created by the db_session fixture
         # Execute a simple query against each table to confirm existence

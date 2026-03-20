@@ -7,6 +7,7 @@ Provides:
 - Retry helper with exponential back-off
 - Standard interface: async def run(state) -> dict
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -20,7 +21,7 @@ from app.config import settings
 logger = structlog.get_logger(__name__)
 
 _DEFAULT_RETRIES = 3
-_BASE_DELAY = 1.0   # seconds
+_BASE_DELAY = 1.0  # seconds
 
 
 class BaseAgent:

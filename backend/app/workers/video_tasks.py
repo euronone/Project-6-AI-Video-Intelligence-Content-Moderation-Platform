@@ -20,9 +20,9 @@ Public entry point:
 from __future__ import annotations
 
 import asyncio
+import os
 import subprocess
 import tempfile
-import os
 import uuid
 from datetime import datetime
 from typing import Any
@@ -43,6 +43,7 @@ logger = structlog.get_logger(__name__)
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
 
 def _s3_url(s3_key: str) -> str:
     """Build an s3:// URL from a storage key."""
@@ -70,6 +71,7 @@ def _set_video_status(video_id: str, status: VideoStatus, error: str | None = No
 
 
 # ── W-02-A: Frame extraction ───────────────────────────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -114,6 +116,7 @@ def extract_frames_task(
 
 
 # ── W-02-B: Audio transcription ────────────────────────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -163,6 +166,7 @@ def transcribe_audio_task(
 
 # ── W-02-C: Thumbnail generation ───────────────────────────────────────────────
 
+
 @shared_task(
     bind=True,
     name="app.workers.video_tasks.generate_thumbnail_task",
@@ -187,11 +191,15 @@ def generate_thumbnail_task(self, video_id: str, s3_key: str) -> str | None:
         _s3_client().download_file(settings.S3_BUCKET_NAME, s3_key, tmp_video)
 
         cmd = [
-            "ffmpeg", "-y",
-            "-i", tmp_video,
-            "-vframes", "1",
+            "ffmpeg",
+            "-y",
+            "-i",
+            tmp_video,
+            "-vframes",
+            "1",
             "-an",
-            "-q:v", "2",
+            "-q:v",
+            "2",
             tmp_thumb,
         ]
         proc = subprocess.run(cmd, capture_output=True, timeout=60, check=False)
@@ -223,6 +231,7 @@ def generate_thumbnail_task(self, video_id: str, s3_key: str) -> str | None:
 
 
 # ── W-02-D: Full AI analysis pipeline ─────────────────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -313,6 +322,7 @@ def run_analysis_pipeline_task(
 
 
 # ── W-02-E: Orchestrating entry point ─────────────────────────────────────────
+
 
 @shared_task(
     bind=True,

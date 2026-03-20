@@ -20,8 +20,8 @@ from app.core.exceptions import (
     validation_exception_handler,
 )
 
-
 # ── Helper: minimal app with registered handlers ──────────────────────────────
+
 
 def _make_app() -> FastAPI:
     test_app = FastAPI()

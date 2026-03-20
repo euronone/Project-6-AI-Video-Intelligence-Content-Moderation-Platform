@@ -4,6 +4,7 @@ A-04 Metadata Extractor Agent
 Extracts structured metadata from video frames and transcript:
 entities, brands, keywords, OCR text, detected objects, locations.
 """
+
 from __future__ import annotations
 
 import json
@@ -36,9 +37,7 @@ class MetadataExtractorAgent(BaseAgent):
         )
 
         try:
-            result = await self._call_with_retry(
-                self._extract, frames, transcript
-            )
+            result = await self._call_with_retry(self._extract, frames, transcript)
             logger.info("metadata_extractor_done", video_id=video_id)
             return {
                 "metadata": result.model_dump(),
@@ -52,9 +51,7 @@ class MetadataExtractorAgent(BaseAgent):
                 "completed_agents": self._mark_completed(state),
             }
 
-    async def _extract(
-        self, frames: list[str], transcript: str
-    ) -> MetadataResult:
+    async def _extract(self, frames: list[str], transcript: str) -> MetadataResult:
         # Build content: first frame as visual context + text prompt
         content: list[dict] = []
 

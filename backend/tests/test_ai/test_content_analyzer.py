@@ -1,4 +1,5 @@
 """Tests for A-02 ContentAnalyzerAgent — OpenAI mocked."""
+
 import json
 from unittest.mock import AsyncMock, MagicMock
 
@@ -38,11 +39,13 @@ async def test_content_analysis_happy_path(agent):
         "duration_seconds": 120.0,
     }
     agent._client = _mock_client(return_value=_fake_response(payload))
-    result = await agent.run({
-        "video_id": "v1",
-        "frames": ["abc"],
-        "transcript": "Today we make pasta.",
-    })
+    result = await agent.run(
+        {
+            "video_id": "v1",
+            "frames": ["abc"],
+            "transcript": "Today we make pasta.",
+        }
+    )
 
     ca = result["content_analysis"]
     assert ca["summary"] == "A cooking tutorial about pasta."
@@ -60,11 +63,13 @@ async def test_content_analysis_no_frames(agent):
         "language": "en",
     }
     agent._client = _mock_client(return_value=_fake_response(payload))
-    result = await agent.run({
-        "video_id": "v2",
-        "frames": [],
-        "transcript": "Hello everyone.",
-    })
+    result = await agent.run(
+        {
+            "video_id": "v2",
+            "frames": [],
+            "transcript": "Hello everyone.",
+        }
+    )
 
     assert result["content_analysis"]["summary"] == "Audio-only content."
 

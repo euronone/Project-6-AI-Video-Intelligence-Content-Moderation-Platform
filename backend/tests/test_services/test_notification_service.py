@@ -1,4 +1,5 @@
 """Tests for S-06 NotificationService — DB and HTTP mocked."""
+
 from __future__ import annotations
 
 import uuid
@@ -7,7 +8,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.core.exceptions import NotFoundError, ValidationError
-
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -48,6 +48,7 @@ def _make_db(endpoint=None):
 
 # ── list_webhooks ──────────────────────────────────────────────────────────────
 
+
 class TestListWebhooks:
     @pytest.mark.asyncio
     async def test_returns_list_response(self):
@@ -57,8 +58,12 @@ class TestListWebhooks:
         db = _make_db(endpoint=endpoint)
 
         mock_list_resp = MagicMock()
-        with patch("app.services.notification_service.WebhookResponse") as MockResp, \
-             patch("app.services.notification_service.WebhookListResponse", return_value=mock_list_resp):
+        with (
+            patch("app.services.notification_service.WebhookResponse") as MockResp,
+            patch(
+                "app.services.notification_service.WebhookListResponse", return_value=mock_list_resp
+            ),
+        ):
             MockResp.model_validate.return_value = MagicMock()
             service = NotificationService(db=db)
             result = await service.list_webhooks(_OWNER_ID)
@@ -67,6 +72,7 @@ class TestListWebhooks:
 
 
 # ── create_webhook ─────────────────────────────────────────────────────────────
+
 
 class TestCreateWebhook:
     @pytest.mark.asyncio
@@ -83,8 +89,10 @@ class TestCreateWebhook:
         body.events = ["moderation.flagged"]
         body.is_active = True
 
-        with patch("app.services.notification_service.WebhookEndpoint", return_value=endpoint), \
-             patch("app.services.notification_service.WebhookResponse") as MockResp:
+        with (
+            patch("app.services.notification_service.WebhookEndpoint", return_value=endpoint),
+            patch("app.services.notification_service.WebhookResponse") as MockResp,
+        ):
             MockResp.model_validate.return_value = MagicMock()
             service = NotificationService(db=db)
             await service.create_webhook(_OWNER_ID, None, body)
@@ -107,6 +115,7 @@ class TestCreateWebhook:
 
 
 # ── get_webhook ────────────────────────────────────────────────────────────────
+
 
 class TestGetWebhook:
     @pytest.mark.asyncio
@@ -133,6 +142,7 @@ class TestGetWebhook:
 
 # ── delete_webhook ─────────────────────────────────────────────────────────────
 
+
 class TestDeleteWebhook:
     @pytest.mark.asyncio
     async def test_deletes_endpoint(self):
@@ -156,6 +166,7 @@ class TestDeleteWebhook:
 
 
 # ── test_webhook ───────────────────────────────────────────────────────────────
+
 
 class TestTestWebhook:
     @pytest.mark.asyncio
@@ -183,6 +194,7 @@ class TestTestWebhook:
     @pytest.mark.asyncio
     async def test_returns_failure_message_on_request_error(self):
         import httpx
+
         from app.services.notification_service import NotificationService
 
         endpoint = _make_endpoint()
@@ -202,6 +214,7 @@ class TestTestWebhook:
 
 
 # ── dispatch_event ─────────────────────────────────────────────────────────────
+
 
 class TestDispatchEvent:
     def test_enqueues_celery_task(self):

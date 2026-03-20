@@ -2,13 +2,13 @@
 Live Stream API — B-05
 Stream registration, management, and real-time WebSocket events.
 """
+
 import contextlib
 import json
 import uuid
 from datetime import datetime
 from typing import Annotated
 
-import redis.asyncio as aioredis
 import structlog
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect, status
 from jose import JWTError
@@ -17,9 +17,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, OperatorUser
 from app.config import settings
-from app.core.exceptions import ForbiddenError, NotFoundError, UnauthorizedError
+from app.core.exceptions import NotFoundError
 from app.core.security import decode_token
-from app.dependencies import get_db, get_redis
+from app.dependencies import get_db
 from app.models.alert import LiveStream, StreamStatus
 from app.schemas.live import MessageResponse, StreamCreate, StreamListResponse, StreamResponse
 
@@ -31,6 +31,7 @@ _ws_connections: dict[str, list[WebSocket]] = {}
 
 
 # ── GET /live/streams ─────────────────────────────────────────────────────────
+
 
 @router.get("/streams", response_model=StreamListResponse, summary="List active live streams")
 async def list_streams(
@@ -57,6 +58,7 @@ async def list_streams(
 
 
 # ── POST /live/streams ────────────────────────────────────────────────────────
+
 
 @router.post(
     "/streams",
@@ -90,6 +92,7 @@ async def create_stream(
 
 # ── GET /live/streams/{id} ────────────────────────────────────────────────────
 
+
 @router.get(
     "/streams/{stream_id}",
     response_model=StreamResponse,
@@ -109,6 +112,7 @@ async def get_stream(
 
 
 # ── POST /live/streams/{id}/stop ──────────────────────────────────────────────
+
 
 @router.post(
     "/streams/{stream_id}/stop",
@@ -142,12 +146,13 @@ async def stop_stream(
 
 # ── WS /live/ws/streams/{id} ──────────────────────────────────────────────────
 
+
 @router.websocket("/ws/streams/{stream_id}")
 async def websocket_stream(
     stream_id: str,
     websocket: WebSocket,
     token: str = Query(..., description="JWT access token"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ) -> None:
     """
     WebSocket endpoint for real-time stream events.

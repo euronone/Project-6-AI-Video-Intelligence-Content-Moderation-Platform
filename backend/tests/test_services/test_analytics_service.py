@@ -1,4 +1,5 @@
 """Tests for S-04 AnalyticsService — DB and Redis mocked."""
+
 from __future__ import annotations
 
 from datetime import date
@@ -6,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
 
 def _make_db(scalar_value=0):
     db = AsyncMock()
@@ -31,6 +32,7 @@ def _make_redis(cached_value=None):
 
 
 # ── get_summary ────────────────────────────────────────────────────────────────
+
 
 class TestGetSummary:
     @pytest.mark.asyncio
@@ -86,6 +88,7 @@ class TestGetSummary:
 
 # ── get_violations ─────────────────────────────────────────────────────────────
 
+
 class TestGetViolations:
     @pytest.mark.asyncio
     async def test_returns_violations_response_with_defaults(self):
@@ -122,6 +125,7 @@ class TestGetViolations:
 
 # ── export_csv ─────────────────────────────────────────────────────────────────
 
+
 class TestExportCsv:
     @pytest.mark.asyncio
     async def test_yields_csv_header_and_rows(self):
@@ -151,6 +155,7 @@ class TestExportCsv:
 
 
 # ── record_event ───────────────────────────────────────────────────────────────
+
 
 class TestRecordEvent:
     @pytest.mark.asyncio

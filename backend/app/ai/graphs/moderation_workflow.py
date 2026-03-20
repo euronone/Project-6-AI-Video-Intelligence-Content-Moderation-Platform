@@ -36,6 +36,7 @@ Public API:
     result.escalated           # bool
     result.recommended_action  # str
 """
+
 from __future__ import annotations
 
 import operator
@@ -57,6 +58,7 @@ _DEFAULT_CONFIDENCE_THRESHOLD = 0.6
 
 # ── State ─────────────────────────────────────────────────────────────────────
 
+
 class ModerationWorkflowState(TypedDict, total=False):
     # ── Input ─────────────────────────────────────────────────────────────────
     video_id: str
@@ -68,12 +70,12 @@ class ModerationWorkflowState(TypedDict, total=False):
     confidence_threshold: float
 
     # ── Chain output ──────────────────────────────────────────────────────────
-    chain_output: dict[str, Any]         # ModerationChainOutput.model_dump()
+    chain_output: dict[str, Any]  # ModerationChainOutput.model_dump()
 
     # ── Workflow control ──────────────────────────────────────────────────────
     escalated: bool
-    final_decision: str                  # ModerationDecision value
-    final_severity: str                  # ViolationSeverity value
+    final_decision: str  # ModerationDecision value
+    final_severity: str  # ViolationSeverity value
     final_confidence: float
     final_reasoning: str
     final_recommended_action: str
@@ -83,6 +85,7 @@ class ModerationWorkflowState(TypedDict, total=False):
 
 
 # ── Output schema ─────────────────────────────────────────────────────────────
+
 
 class ModerationWorkflowResult(BaseModel):
     video_id: str
@@ -97,10 +100,11 @@ class ModerationWorkflowResult(BaseModel):
 
 # ── Injectable chain (allows test mocking) ────────────────────────────────────
 
-_chain_fn = run_moderation_chain   # can be replaced in tests
+_chain_fn = run_moderation_chain  # can be replaced in tests
 
 
 # ── Node functions ────────────────────────────────────────────────────────────
+
 
 async def load_context_node(state: ModerationWorkflowState) -> dict[str, Any]:
     """Validate required fields and set defaults."""
@@ -211,6 +215,7 @@ async def finalize_node(state: ModerationWorkflowState) -> dict[str, Any]:
 
 # ── Build graph ───────────────────────────────────────────────────────────────
 
+
 def _build_workflow() -> Any:
     graph = StateGraph(ModerationWorkflowState)
 
@@ -238,6 +243,7 @@ _compiled_workflow = _build_workflow()
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
+
 
 async def run_moderation_workflow(
     video_id: str,

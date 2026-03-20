@@ -5,31 +5,32 @@ These schemas are the contracts between agents and the orchestrator.
 They are also used to validate the final moderation report before it
 is persisted to the database.
 """
+
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 # ── Enums ────────────────────────────────────────────────────────────────────
 
-class ViolationSeverity(str, Enum):
+
+class ViolationSeverity(StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
 
 
-class ModerationDecision(str, Enum):
+class ModerationDecision(StrEnum):
     APPROVED = "approved"
     REJECTED = "rejected"
-    ESCALATED = "escalated"     # needs human review
+    ESCALATED = "escalated"  # needs human review
     NEEDS_REVIEW = "needs_review"
 
 
-class SceneCategory(str, Enum):
+class SceneCategory(StrEnum):
     SAFE = "safe"
     VIOLENCE = "violence"
     NUDITY = "nudity"
@@ -43,6 +44,7 @@ class SceneCategory(str, Enum):
 
 # ── Per-agent output schemas ──────────────────────────────────────────────────
 
+
 class Violation(BaseModel):
     category: SceneCategory
     severity: ViolationSeverity
@@ -55,7 +57,7 @@ class Violation(BaseModel):
 class ContentAnalysisResult(BaseModel):
     summary: str
     topics: list[str] = Field(default_factory=list)
-    sentiment: str = "neutral"   # positive / negative / neutral / mixed
+    sentiment: str = "neutral"  # positive / negative / neutral / mixed
     language: str = "en"
     duration_seconds: float | None = None
     raw_response: str = ""
@@ -95,7 +97,7 @@ class ModerationReport(BaseModel):
     violations: list[Violation] = Field(default_factory=list)
     content_summary: str = ""
     metadata: dict[str, Any] = Field(default_factory=dict)
-    scene_summary: dict[str, int] = Field(default_factory=dict)   # category → count
+    scene_summary: dict[str, int] = Field(default_factory=dict)  # category → count
     policy_triggers: list[str] = Field(default_factory=list)
     transcript_excerpt: str = ""
     processing_errors: list[str] = Field(default_factory=list)

@@ -26,6 +26,7 @@ Schedule example (Celery Beat):
         },
     }
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -50,6 +51,7 @@ _TEMP_FRAMES_PREFIX = "temp/frames/"
 
 
 # ── W-05-A: Delete temp frame artifacts from S3 ───────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -119,6 +121,7 @@ def cleanup_temp_frames_task(
 
 # ── W-05-B: Purge stale jobs ──────────────────────────────────────────────────
 
+
 @shared_task(
     bind=True,
     name="app.workers.cleanup_tasks.purge_stale_jobs_task",
@@ -172,6 +175,7 @@ def purge_stale_jobs_task(
 
 # ── W-05-C: Prune old analytics events ───────────────────────────────────────
 
+
 @shared_task(
     bind=True,
     name="app.workers.cleanup_tasks.prune_old_analytics_events_task",
@@ -213,6 +217,7 @@ def prune_old_analytics_events_task(
 
 
 # ── W-05-D: Clean up orphaned S3 objects ──────────────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -264,11 +269,7 @@ def cleanup_orphaned_s3_objects_task(
 
                 s3_key = obj["Key"]
                 with sync_session() as db:
-                    exists = (
-                        db.query(Video)
-                        .filter(Video.s3_key == s3_key)
-                        .first()
-                    )
+                    exists = db.query(Video).filter(Video.s3_key == s3_key).first()
                 if not exists:
                     orphan_keys.append({"Key": s3_key})
 

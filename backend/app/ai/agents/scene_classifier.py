@@ -4,6 +4,7 @@ A-05 Scene Classifier Agent
 Classifies each sampled frame independently using GPT-4o vision.
 Produces per-frame SceneClassification results stored in state["scene_classifications"].
 """
+
 from __future__ import annotations
 
 import json
@@ -18,7 +19,7 @@ from app.ai.schemas import SceneCategory, SceneClassification
 logger = structlog.get_logger(__name__)
 
 _VISION_MODEL = "gpt-4o"
-_MAX_CONCURRENT = 5   # frames to classify in parallel (rate-limit friendly)
+_MAX_CONCURRENT = 5  # frames to classify in parallel (rate-limit friendly)
 
 
 class SceneClassifierAgent(BaseAgent):
@@ -46,8 +47,8 @@ class SceneClassifierAgent(BaseAgent):
 
         # Process frames in batches to avoid flooding the API
         for batch_start in range(0, len(frames), _MAX_CONCURRENT):
-            batch_frames = frames[batch_start: batch_start + _MAX_CONCURRENT]
-            batch_ts = timestamps[batch_start: batch_start + _MAX_CONCURRENT]
+            batch_frames = frames[batch_start : batch_start + _MAX_CONCURRENT]
+            batch_ts = timestamps[batch_start : batch_start + _MAX_CONCURRENT]
 
             results = await self._classify_batch(
                 batch_frames, batch_ts, batch_start, state.get("video_id", "")
@@ -78,6 +79,7 @@ class SceneClassifierAgent(BaseAgent):
         video_id: str,
     ) -> list[tuple[SceneClassification | None, str | None]]:
         import asyncio
+
         tasks = [
             self._classify_frame(frame, ts, start_index + i, video_id)
             for i, (frame, ts) in enumerate(zip(frames, timestamps, strict=True))

@@ -1,4 +1,5 @@
 """Tests for A-04 MetadataExtractorAgent — OpenAI mocked."""
+
 import json
 from unittest.mock import AsyncMock, MagicMock
 
@@ -39,11 +40,13 @@ async def test_metadata_extraction_happy_path(agent):
         "locations": ["London"],
     }
     agent._client = _mock_client(return_value=_fake_response(payload))
-    result = await agent.run({
-        "video_id": "v1",
-        "frames": ["frame_b64"],
-        "transcript": "Gordon Ramsay cooks in London.",
-    })
+    result = await agent.run(
+        {
+            "video_id": "v1",
+            "frames": ["frame_b64"],
+            "transcript": "Gordon Ramsay cooks in London.",
+        }
+    )
 
     meta = result["metadata"]
     assert "Gordon Ramsay" in meta["entities"]
@@ -54,8 +57,12 @@ async def test_metadata_extraction_happy_path(agent):
 @pytest.mark.asyncio
 async def test_metadata_extraction_empty_video(agent):
     payload = {
-        "entities": [], "brands": [], "keywords": [],
-        "ocr_text": [], "objects_detected": [], "locations": [],
+        "entities": [],
+        "brands": [],
+        "keywords": [],
+        "ocr_text": [],
+        "objects_detected": [],
+        "locations": [],
     }
     agent._client = _mock_client(return_value=_fake_response(payload))
     result = await agent.run({"video_id": "v2", "frames": [], "transcript": ""})
@@ -69,7 +76,11 @@ async def test_metadata_extraction_api_failure_returns_empty(agent):
     result = await agent.run({"video_id": "v3", "frames": ["f"], "transcript": "hi"})
 
     assert result["metadata"] == {
-        "entities": [], "brands": [], "keywords": [],
-        "ocr_text": [], "objects_detected": [], "locations": [],
+        "entities": [],
+        "brands": [],
+        "keywords": [],
+        "ocr_text": [],
+        "objects_detected": [],
+        "locations": [],
     }
     assert any("rate limited" in e for e in result.get("errors", []))

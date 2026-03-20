@@ -1,6 +1,5 @@
 """Tests for app.core.middleware — request context and response wrapping."""
 
-import json
 import uuid
 
 import pytest

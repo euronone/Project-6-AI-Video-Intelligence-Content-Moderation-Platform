@@ -1,4 +1,5 @@
 """Tests for T-01 FrameExtractor — OpenCV and boto3 mocked."""
+
 from __future__ import annotations
 
 import base64
@@ -15,8 +16,8 @@ from app.ai.tools.frame_extractor import (
     extract_frames,
 )
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _make_mock_cap(
     *,
@@ -32,8 +33,8 @@ def _make_mock_cap(
     cap = MagicMock()
     cap.isOpened.return_value = True
     cap.get.side_effect = lambda prop: {
-        0: fps,          # CAP_PROP_FPS
-        7: total_frames, # CAP_PROP_FRAME_COUNT
+        0: fps,  # CAP_PROP_FPS
+        7: total_frames,  # CAP_PROP_FRAME_COUNT
     }.get(prop, 0.0)
 
     if read_returns is not None:
@@ -51,6 +52,7 @@ def _b64_jpeg() -> str:
 
 
 # ── _extract_local ─────────────────────────────────────────────────────────────
+
 
 @patch("app.ai.tools.frame_extractor.cv2.VideoCapture")
 @patch("app.ai.tools.frame_extractor.cv2.imencode")
@@ -127,6 +129,7 @@ def test_extract_local_zero_fps_fallback(mock_imencode, mock_cap_cls):
 
 # ── extract_frames (S3 path) ──────────────────────────────────────────────────
 
+
 @patch("app.ai.tools.frame_extractor._download_from_s3")
 @patch("app.ai.tools.frame_extractor._extract_local")
 def test_extract_frames_s3_url_downloads_then_extracts(mock_extract, mock_download):
@@ -155,6 +158,7 @@ def test_extract_frames_local_path_no_s3(mock_imencode, mock_cap_cls):
 
 
 # ── _download_from_s3 ─────────────────────────────────────────────────────────
+
 
 def test_download_from_s3_invalid_scheme_raises():
     with pytest.raises(FrameExtractionError, match="Unsupported URL scheme"):

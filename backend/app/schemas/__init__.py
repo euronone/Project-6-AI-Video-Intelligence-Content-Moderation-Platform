@@ -1,4 +1,3 @@
-from app.schemas.user import UserBase, UserCreate, UserUpdate, UserResponse
 from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
@@ -7,6 +6,7 @@ from app.schemas.auth import (
     RegisterRequest,
     TokenPair,
 )
+from app.schemas.user import UserBase, UserCreate, UserResponse, UserUpdate
 
 __all__ = [
     "UserBase",

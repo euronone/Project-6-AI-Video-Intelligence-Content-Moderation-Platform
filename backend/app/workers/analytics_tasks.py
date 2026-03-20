@@ -9,6 +9,7 @@ Public entry points:
     compute_policy_effectiveness_task.delay(policy_id="...")
     flush_analytics_events_task.delay()
 """
+
 from __future__ import annotations
 
 import json
@@ -17,11 +18,10 @@ from typing import Any
 
 import structlog
 from celery import shared_task
-from sqlalchemy import func, select
+from sqlalchemy import func
 
 from app.models.analytics import AnalyticsEvent, EventType
 from app.models.moderation import ModerationResult, ModerationStatus
-from app.models.video import Video, VideoStatus
 from app.workers.celery_app import sync_session
 
 logger = structlog.get_logger(__name__)
@@ -31,6 +31,7 @@ _ANALYTICS_BUFFER_KEY = "vidshield:analytics:event_buffer"
 
 
 # ── W-04-A: Aggregate daily statistics ────────────────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -64,9 +65,7 @@ def aggregate_daily_stats_task(
 
     try:
         with sync_session() as db:
-            base = db.query(AnalyticsEvent).filter(
-                AnalyticsEvent.event_date == target_date
-            )
+            base = db.query(AnalyticsEvent).filter(AnalyticsEvent.event_date == target_date)
             if tenant_id:
                 base = base.filter(AnalyticsEvent.tenant_id == tenant_id)
 
@@ -82,13 +81,10 @@ def aggregate_daily_stats_task(
                 AnalyticsEvent.event_type == EventType.REVIEW_COMPLETED
             ).count()
 
-            avg_confidence_row = (
-                db.query(func.avg(AnalyticsEvent.confidence))
-                .filter(
-                    AnalyticsEvent.event_date == target_date,
-                    AnalyticsEvent.event_type == EventType.VIOLATION_DETECTED,
-                    AnalyticsEvent.confidence.isnot(None),
-                )
+            avg_confidence_row = db.query(func.avg(AnalyticsEvent.confidence)).filter(
+                AnalyticsEvent.event_date == target_date,
+                AnalyticsEvent.event_type == EventType.VIOLATION_DETECTED,
+                AnalyticsEvent.confidence.isnot(None),
             )
             if tenant_id:
                 avg_confidence_row = avg_confidence_row.filter(
@@ -113,6 +109,7 @@ def aggregate_daily_stats_task(
 
 
 # ── W-04-B: Policy effectiveness ──────────────────────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -153,9 +150,7 @@ def compute_policy_effectiveness_task(
                 ModerationStatus.FLAGGED,
             ):
                 counts[status.value] = (
-                    db.query(ModerationResult)
-                    .filter(ModerationResult.status == status)
-                    .count()
+                    db.query(ModerationResult).filter(ModerationResult.status == status).count()
                 )
 
         approved = counts.get("approved", 0)
@@ -180,6 +175,7 @@ def compute_policy_effectiveness_task(
 
 
 # ── W-04-C: Flush buffered events ─────────────────────────────────────────────
+
 
 @shared_task(
     bind=True,

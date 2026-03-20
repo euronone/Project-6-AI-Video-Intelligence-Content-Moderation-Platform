@@ -1,20 +1,20 @@
 """Tests for T-05 SimilaritySearch — Pinecone index mocked."""
+
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from app.ai.tools.similarity_search import (
-    SimilarityMatch,
     SimilaritySearchError,
     SimilaritySearchResult,
     query_similar,
     upsert_vectors,
 )
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _fake_query_response(matches: list[dict]) -> dict:
     return {"matches": matches}
@@ -34,6 +34,7 @@ _EMBEDDING = [0.1, 0.2, 0.3]
 
 
 # ── query_similar ─────────────────────────────────────────────────────────────
+
 
 def test_query_similar_happy_path():
     matches = [
@@ -102,6 +103,7 @@ def test_query_similar_namespace_passed():
 
 # ── upsert_vectors ────────────────────────────────────────────────────────────
 
+
 def test_upsert_vectors_happy_path():
     index = _mock_index()
     vectors = [
@@ -140,8 +142,10 @@ def test_upsert_vectors_returns_correct_count():
 
 # ── SimilaritySearchError propagation ────────────────────────────────────────
 
+
 def test_similarity_search_error_propagates_from_query():
     """SimilaritySearchError raised inside should not be swallowed."""
+
     def _raise(*args, **kwargs):
         raise SimilaritySearchError("test propagation")
 

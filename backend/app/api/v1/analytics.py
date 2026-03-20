@@ -2,6 +2,7 @@
 Analytics API — B-04
 Summary metrics, violation time-series, and CSV export.
 """
+
 from datetime import date, timedelta
 from typing import Annotated
 
@@ -34,6 +35,7 @@ def _cache_key(tenant_id: str | None) -> str:
 
 # ── GET /analytics/summary ────────────────────────────────────────────────────
 
+
 @router.get(
     "/summary",
     response_model=AnalyticsSummary,
@@ -54,17 +56,23 @@ async def get_summary(
     if current_user.tenant_id:
         base = base.where(AnalyticsEvent.tenant_id == current_user.tenant_id)
 
-    processed_count = await db.scalar(
-        select(func.count()).select_from(
-            base.where(AnalyticsEvent.event_type == EventType.VIDEO_PROCESSED).subquery()
+    processed_count = (
+        await db.scalar(
+            select(func.count()).select_from(
+                base.where(AnalyticsEvent.event_type == EventType.VIDEO_PROCESSED).subquery()
+            )
         )
-    ) or 0
+        or 0
+    )
 
-    violations_count = await db.scalar(
-        select(func.count()).select_from(
-            base.where(AnalyticsEvent.event_type == EventType.VIOLATION_DETECTED).subquery()
+    violations_count = (
+        await db.scalar(
+            select(func.count()).select_from(
+                base.where(AnalyticsEvent.event_type == EventType.VIOLATION_DETECTED).subquery()
+            )
         )
-    ) or 0
+        or 0
+    )
 
     violation_rate = round(
         (violations_count / processed_count * 100) if processed_count else 0.0, 2
@@ -79,8 +87,7 @@ async def get_summary(
         .limit(5)
     )
     top_categories = [
-        {"category": row.category or "unknown", "count": row.cnt}
-        for row in cat_result
+        {"category": row.category or "unknown", "count": row.cnt} for row in cat_result
     ]
 
     summary = AnalyticsSummary(
@@ -99,6 +106,7 @@ async def get_summary(
 
 
 # ── GET /analytics/violations ─────────────────────────────────────────────────
+
 
 @router.get(
     "/violations",
@@ -129,9 +137,7 @@ async def get_violations(
         .group_by(AnalyticsEvent.event_date)
         .order_by(AnalyticsEvent.event_date)
     )
-    time_series = [
-        ViolationDataPoint(date=row.event_date, count=row.cnt) for row in ts_result
-    ]
+    time_series = [ViolationDataPoint(date=row.event_date, count=row.cnt) for row in ts_result]
 
     # Category breakdown
     cat_result = await db.execute(
@@ -162,6 +168,7 @@ async def get_violations(
 
 
 # ── GET /analytics/export ─────────────────────────────────────────────────────
+
 
 @router.get(
     "/export",
@@ -198,5 +205,7 @@ async def export_analytics(
     return StreamingResponse(
         _generate(),
         media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="violations_{from_str}_{to_str}.csv"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="violations_{from_str}_{to_str}.csv"'
+        },
     )

@@ -1,4 +1,5 @@
 """Tests for D-04 Policy model."""
+
 from __future__ import annotations
 
 import uuid

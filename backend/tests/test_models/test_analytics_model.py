@@ -1,4 +1,5 @@
 """Tests for D-05 AnalyticsEvent model."""
+
 from __future__ import annotations
 
 import uuid

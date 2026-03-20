@@ -1,15 +1,8 @@
 """Tests for app.core.logging — setup_logging and get_logger."""
-import json
-import logging
-import sys
-from io import StringIO
-from unittest.mock import patch
 
-import pytest
-import structlog
+import logging
 
 from app.core.logging import get_logger, setup_logging
-
 
 # ── setup_logging ─────────────────────────────────────────────────────────────
 

@@ -1,4 +1,5 @@
 """Tests for W-05 — cleanup_tasks (S3 and DB mocked)."""
+
 from __future__ import annotations
 
 import uuid
@@ -13,6 +14,7 @@ def _utc_now():
 
 
 # ── cleanup_temp_frames_task ───────────────────────────────────────────────────
+
 
 class TestCleanupTempFramesTask:
     def _s3_object(self, key: str, age_hours: int = 30):
@@ -33,6 +35,7 @@ class TestCleanupTempFramesTask:
         mock_s3.delete_objects.return_value = {"Errors": []}
 
         from app.workers.cleanup_tasks import cleanup_temp_frames_task
+
         result = cleanup_temp_frames_task(ttl_hours=24)
 
         assert result["deleted"] == 1
@@ -50,6 +53,7 @@ class TestCleanupTempFramesTask:
         mock_s3.get_paginator.return_value = mock_paginator
 
         from app.workers.cleanup_tasks import cleanup_temp_frames_task
+
         result = cleanup_temp_frames_task(ttl_hours=24)
 
         assert result["deleted"] == 0
@@ -65,6 +69,7 @@ class TestCleanupTempFramesTask:
         mock_s3.get_paginator.return_value = mock_paginator
 
         from app.workers.cleanup_tasks import cleanup_temp_frames_task
+
         result = cleanup_temp_frames_task()
 
         assert result["deleted"] == 0
@@ -75,11 +80,13 @@ class TestCleanupTempFramesTask:
         mock_boto_client.side_effect = Exception("S3 connection refused")
 
         from app.workers.cleanup_tasks import cleanup_temp_frames_task
+
         with pytest.raises(Exception):  # noqa: B017 — retry wraps varied error types
             cleanup_temp_frames_task.apply(args=[24]).get(propagate=True)
 
 
 # ── purge_stale_jobs_task ──────────────────────────────────────────────────────
+
 
 class TestPurgeStaleJobsTask:
     @patch("app.workers.cleanup_tasks.sync_session")
@@ -94,6 +101,7 @@ class TestPurgeStaleJobsTask:
         mock_sync_session.return_value = mock_db
 
         from app.workers.cleanup_tasks import purge_stale_jobs_task
+
         result = purge_stale_jobs_task(stale_hours=2)
 
         assert result["marked_failed"] == 1
@@ -108,6 +116,7 @@ class TestPurgeStaleJobsTask:
         mock_sync_session.return_value = mock_db
 
         from app.workers.cleanup_tasks import purge_stale_jobs_task
+
         result = purge_stale_jobs_task()
 
         assert result["marked_failed"] == 0
@@ -119,11 +128,13 @@ class TestPurgeStaleJobsTask:
         mock_sync_session.return_value = mock_db
 
         from app.workers.cleanup_tasks import purge_stale_jobs_task
+
         with pytest.raises(Exception):  # noqa: B017 — retry wraps varied error types
             purge_stale_jobs_task.apply().get(propagate=True)
 
 
 # ── prune_old_analytics_events_task ───────────────────────────────────────────
+
 
 class TestPruneOldAnalyticsEventsTask:
     @patch("app.workers.cleanup_tasks.sync_session")
@@ -135,6 +146,7 @@ class TestPruneOldAnalyticsEventsTask:
         mock_sync_session.return_value = mock_db
 
         from app.workers.cleanup_tasks import prune_old_analytics_events_task
+
         result = prune_old_analytics_events_task(retention_days=90)
 
         assert result["deleted"] == 42
@@ -148,12 +160,14 @@ class TestPruneOldAnalyticsEventsTask:
         mock_sync_session.return_value = mock_db
 
         from app.workers.cleanup_tasks import prune_old_analytics_events_task
+
         result = prune_old_analytics_events_task()
 
         assert result["deleted"] == 0
 
 
 # ── cleanup_orphaned_s3_objects_task ──────────────────────────────────────────
+
 
 class TestCleanupOrphanedS3ObjectsTask:
     def _s3_object(self, key: str, age_hours: int = 72):
@@ -182,6 +196,7 @@ class TestCleanupOrphanedS3ObjectsTask:
         mock_sync_session.return_value = mock_db
 
         from app.workers.cleanup_tasks import cleanup_orphaned_s3_objects_task
+
         result = cleanup_orphaned_s3_objects_task(prefix="videos/", min_age_hours=48)
 
         assert result["scanned"] == 1
@@ -207,6 +222,7 @@ class TestCleanupOrphanedS3ObjectsTask:
         mock_sync_session.return_value = mock_db
 
         from app.workers.cleanup_tasks import cleanup_orphaned_s3_objects_task
+
         result = cleanup_orphaned_s3_objects_task()
 
         assert result["deleted"] == 0
@@ -225,6 +241,7 @@ class TestCleanupOrphanedS3ObjectsTask:
         mock_sync_session.return_value = MagicMock()
 
         from app.workers.cleanup_tasks import cleanup_orphaned_s3_objects_task
+
         result = cleanup_orphaned_s3_objects_task(min_age_hours=48)
 
         assert result["deleted"] == 0

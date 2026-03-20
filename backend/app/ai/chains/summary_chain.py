@@ -17,6 +17,7 @@ Public API:
     result.key_moments         # list[str]
     result.content_rating      # "G" | "PG" | "PG-13" | "R" | "NC-17"
 """
+
 from __future__ import annotations
 
 import json
@@ -35,6 +36,7 @@ _MODEL = "gpt-4o-mini"
 
 # ── Output schema ─────────────────────────────────────────────────────────────
 
+
 class SummaryOutput(BaseModel):
     executive_summary: str = Field(
         ..., description="2-4 sentence executive summary of the video content."
@@ -50,6 +52,7 @@ class SummaryOutput(BaseModel):
 
 
 # ── Chain factory ─────────────────────────────────────────────────────────────
+
 
 def _build_llm(openai_client=None) -> ChatOpenAI:
     """Build (or wrap) a ChatOpenAI instance."""
@@ -68,6 +71,7 @@ def _build_llm(openai_client=None) -> ChatOpenAI:
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
+
 
 async def run_summary_chain(
     transcript: str = "",

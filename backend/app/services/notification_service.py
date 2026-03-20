@@ -13,6 +13,7 @@ Public API:
     await service.test_webhook(endpoint_id)                    -> str  (status message)
           service.dispatch_event(event, payload, tenant_id)    -> None  (enqueues Celery task)
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -262,5 +263,6 @@ class NotificationService:
             tenant_id: Optional tenant scope — only deliver to matching endpoints.
         """
         from app.workers.moderation_tasks import dispatch_webhooks_task
+
         dispatch_webhooks_task.delay(event=event, payload=payload, tenant_id=tenant_id)
         logger.info("webhook_event_dispatched", webhook_event=event, tenant_id=tenant_id)

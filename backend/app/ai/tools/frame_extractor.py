@@ -15,6 +15,7 @@ Public API:
     result.fps           # float
     result.duration      # float  total video duration in seconds
 """
+
 from __future__ import annotations
 
 import base64
@@ -35,6 +36,7 @@ _MAX_FRAMES_DEFAULT: int = 30
 
 # ── Output schema ─────────────────────────────────────────────────────────────
 
+
 class FrameExtractionResult(BaseModel):
     frames: list[str] = Field(
         default_factory=list,
@@ -52,11 +54,13 @@ class FrameExtractionResult(BaseModel):
 
 # ── Errors ────────────────────────────────────────────────────────────────────
 
+
 class FrameExtractionError(RuntimeError):
     pass
 
 
 # ── S3 download helper ────────────────────────────────────────────────────────
+
 
 def _download_from_s3(s3_url: str) -> str:
     """Download an S3 object to a temp file and return the local path."""
@@ -79,19 +83,18 @@ def _download_from_s3(s3_url: str) -> str:
     )
 
     suffix = os.path.splitext(key)[-1] or ".mp4"
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-    try:
-        s3.download_fileobj(bucket, key, tmp)
-        tmp.flush()
-        return tmp.name
-    except (BotoCoreError, ClientError) as exc:
-        os.unlink(tmp.name)
-        raise FrameExtractionError(f"S3 download failed for {s3_url}: {exc}") from exc
-    finally:
-        tmp.close()
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        try:
+            s3.download_fileobj(bucket, key, tmp)
+            tmp.flush()
+            return tmp.name
+        except (BotoCoreError, ClientError) as exc:
+            os.unlink(tmp.name)
+            raise FrameExtractionError(f"S3 download failed for {s3_url}: {exc}") from exc
 
 
 # ── Core extraction ───────────────────────────────────────────────────────────
+
 
 def _extract_local(
     path: str,
@@ -152,6 +155,7 @@ def _extract_local(
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
+
 
 def extract_frames(
     video_path: str,

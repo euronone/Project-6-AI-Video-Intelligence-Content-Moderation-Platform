@@ -28,7 +28,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.exceptions import ForbiddenError, NotFoundError
-from app.models.user import User
 from app.models.video import Video, VideoStatus
 from app.schemas.video import (
     PaginatedVideos,
@@ -209,6 +208,7 @@ class VideoService:
 
         # Enqueue processing pipeline
         from app.workers.video_tasks import process_video
+
         process_video.delay(str(video.id), body.s3_key, policy_rules or [])
 
         logger.info("video_registered", video_id=str(video.id), owner_id=str(owner_id))
@@ -324,6 +324,7 @@ class VideoService:
         video.status = VideoStatus.DELETED
 
         from app.workers.cleanup_tasks import cleanup_temp_frames_task
+
         cleanup_temp_frames_task.delay(str(video_id))
 
         logger.info("video_soft_deleted", video_id=str(video_id), operator_id=str(operator_id))

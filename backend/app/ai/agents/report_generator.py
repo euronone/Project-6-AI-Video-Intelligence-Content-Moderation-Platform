@@ -4,6 +4,7 @@ A-06 Report Generator Agent
 Synthesises outputs from ContentAnalyzer, SafetyChecker, MetadataExtractor,
 and SceneClassifier into a final ModerationReport that is persisted to the DB.
 """
+
 from __future__ import annotations
 
 import json
@@ -23,7 +24,7 @@ from app.ai.schemas import (
 
 logger = structlog.get_logger(__name__)
 
-_MODEL = "gpt-4o-mini"   # cheaper — report synthesis doesn't need full 4o
+_MODEL = "gpt-4o-mini"  # cheaper — report synthesis doesn't need full 4o
 
 
 class ReportGeneratorAgent(BaseAgent):
@@ -38,9 +39,7 @@ class ReportGeneratorAgent(BaseAgent):
 
         logger.info("report_generator_start", video_id=video_id)
 
-        scene_summary = dict(
-            Counter(s.get("category", "safe") for s in scene_classifications)
-        )
+        scene_summary = dict(Counter(s.get("category", "safe") for s in scene_classifications))
 
         try:
             report = await self._call_with_retry(
@@ -101,9 +100,7 @@ class ReportGeneratorAgent(BaseAgent):
         raw = response.choices[0].message.content or "{}"
         data = json.loads(raw)
 
-        violations = [
-            Violation(**v) for v in safety_result.get("violations", [])
-        ]
+        violations = [Violation(**v) for v in safety_result.get("violations", [])]
 
         return ModerationReport(
             video_id=video_id,

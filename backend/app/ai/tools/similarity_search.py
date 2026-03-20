@@ -24,6 +24,7 @@ Public API:
         namespace="violations",
     )
 """
+
 from __future__ import annotations
 
 import structlog
@@ -39,6 +40,7 @@ _DEFAULT_NAMESPACE = "violations"
 
 # ── Output schemas ────────────────────────────────────────────────────────────
 
+
 class SimilarityMatch(BaseModel):
     id: str
     score: float
@@ -52,6 +54,7 @@ class SimilaritySearchResult(BaseModel):
 
 
 # ── Errors ────────────────────────────────────────────────────────────────────
+
 
 class SimilaritySearchError(RuntimeError):
     pass
@@ -70,14 +73,11 @@ def _get_index():
             from pinecone import Pinecone  # type: ignore[import-untyped]
         except ImportError as exc:
             raise SimilaritySearchError(
-                "pinecone package is not installed. "
-                "Add 'pinecone>=3.0.0' to project dependencies."
+                "pinecone package is not installed. Add 'pinecone>=3.0.0' to project dependencies."
             ) from exc
 
         if not settings.PINECONE_API_KEY:
-            raise SimilaritySearchError(
-                "PINECONE_API_KEY is not configured."
-            )
+            raise SimilaritySearchError("PINECONE_API_KEY is not configured.")
 
         pc = Pinecone(api_key=settings.PINECONE_API_KEY)
         _pinecone_index = pc.Index(settings.PINECONE_INDEX)
@@ -87,6 +87,7 @@ def _get_index():
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
+
 
 def query_similar(
     query_embedding: list[float],
@@ -170,9 +171,7 @@ def upsert_vectors(
     """
     try:
         index = _index if _index is not None else _get_index()
-        logger.info(
-            "similarity_search_upsert", count=len(vectors), namespace=namespace
-        )
+        logger.info("similarity_search_upsert", count=len(vectors), namespace=namespace)
         index.upsert(vectors=vectors, namespace=namespace)
         return len(vectors)
     except SimilaritySearchError:

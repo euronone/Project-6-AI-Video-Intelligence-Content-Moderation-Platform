@@ -1,8 +1,9 @@
 """Tests for W-02 — video_tasks (all external I/O mocked)."""
+
 from __future__ import annotations
 
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -10,6 +11,7 @@ import pytest
 
 _VIDEO_ID = str(uuid.uuid4())
 _S3_KEY = "videos/test.mp4"
+
 
 # Minimal ModerationReport-like object returned by run_video_analysis mock
 def _fake_report():
@@ -30,6 +32,7 @@ def _fake_report():
 
 # ── extract_frames_task ────────────────────────────────────────────────────────
 
+
 class TestExtractFramesTask:
     @patch("app.workers.video_tasks.extract_frames")
     def test_happy_path_returns_frame_dict(self, mock_extract):
@@ -42,6 +45,7 @@ class TestExtractFramesTask:
         mock_extract.return_value = mock_result
 
         from app.workers.video_tasks import extract_frames_task
+
         result = extract_frames_task(_VIDEO_ID, _S3_KEY)
 
         assert result["frames"] == ["b64frame1", "b64frame2"]
@@ -62,6 +66,7 @@ class TestExtractFramesTask:
 
 # ── transcribe_audio_task ──────────────────────────────────────────────────────
 
+
 class TestTranscribeAudioTask:
     @patch("app.workers.video_tasks._s3_client")
     @patch("app.workers.video_tasks.asyncio.run")
@@ -69,7 +74,9 @@ class TestTranscribeAudioTask:
     @patch("app.workers.video_tasks.os.unlink")
     @patch("app.workers.video_tasks.tempfile.mkstemp", return_value=(0, "/tmp/fake.mp4"))
     @patch("app.workers.video_tasks.os.close")
-    def test_happy_path(self, mock_close, mock_mkstemp, mock_unlink, mock_exists, mock_run, mock_s3_client):
+    def test_happy_path(
+        self, mock_close, mock_mkstemp, mock_unlink, mock_exists, mock_run, mock_s3_client
+    ):
         transcript_result = MagicMock()
         transcript_result.text = "Hello world."
         transcript_result.segments = []
@@ -81,6 +88,7 @@ class TestTranscribeAudioTask:
         mock_s3_client.return_value = mock_s3
 
         from app.workers.video_tasks import transcribe_audio_task
+
         result = transcribe_audio_task(_VIDEO_ID, _S3_KEY)
 
         assert result["text"] == "Hello world."
@@ -97,23 +105,34 @@ class TestTranscribeAudioTask:
         mock_s3_client.return_value = mock_s3
 
         from app.workers.video_tasks import transcribe_audio_task
+
         with pytest.raises(Exception):  # noqa: B017 — retry wraps varied error types
             transcribe_audio_task.apply(args=[_VIDEO_ID, _S3_KEY]).get(propagate=True)
 
 
 # ── generate_thumbnail_task ────────────────────────────────────────────────────
 
+
 class TestGenerateThumbnailTask:
     @patch("app.workers.video_tasks.sync_session")
     @patch("app.workers.video_tasks._s3_client")
     @patch("app.workers.video_tasks.subprocess.run")
-    @patch("app.workers.video_tasks.tempfile.mkstemp", side_effect=[(0, "/tmp/v.mp4"), (0, "/tmp/t.jpg")])
+    @patch(
+        "app.workers.video_tasks.tempfile.mkstemp",
+        side_effect=[(0, "/tmp/v.mp4"), (0, "/tmp/t.jpg")],
+    )
     @patch("app.workers.video_tasks.os.close")
     @patch("app.workers.video_tasks.os.path.exists", return_value=True)
     @patch("app.workers.video_tasks.os.unlink")
     def test_happy_path_returns_thumb_key(
-        self, mock_unlink, mock_exists, mock_close, mock_mkstemp,
-        mock_subprocess, mock_s3_client, mock_sync_session
+        self,
+        mock_unlink,
+        mock_exists,
+        mock_close,
+        mock_mkstemp,
+        mock_subprocess,
+        mock_s3_client,
+        mock_sync_session,
     ):
         mock_subprocess.return_value = MagicMock(returncode=0)
         mock_s3 = MagicMock()
@@ -126,13 +145,17 @@ class TestGenerateThumbnailTask:
         mock_sync_session.return_value = mock_db
 
         from app.workers.video_tasks import generate_thumbnail_task
+
         result = generate_thumbnail_task(_VIDEO_ID, _S3_KEY)
 
         assert result == f"thumbnails/{_VIDEO_ID}.jpg"
 
     @patch("app.workers.video_tasks._s3_client")
     @patch("app.workers.video_tasks.subprocess.run")
-    @patch("app.workers.video_tasks.tempfile.mkstemp", side_effect=[(0, "/tmp/v.mp4"), (0, "/tmp/t.jpg")])
+    @patch(
+        "app.workers.video_tasks.tempfile.mkstemp",
+        side_effect=[(0, "/tmp/v.mp4"), (0, "/tmp/t.jpg")],
+    )
     @patch("app.workers.video_tasks.os.close")
     @patch("app.workers.video_tasks.os.path.exists", return_value=True)
     @patch("app.workers.video_tasks.os.unlink")
@@ -144,12 +167,14 @@ class TestGenerateThumbnailTask:
         mock_s3_client.return_value = mock_s3
 
         from app.workers.video_tasks import generate_thumbnail_task
+
         result = generate_thumbnail_task(_VIDEO_ID, _S3_KEY)
 
         assert result is None
 
 
 # ── run_analysis_pipeline_task ─────────────────────────────────────────────────
+
 
 class TestRunAnalysisPipelineTask:
     @patch("app.workers.video_tasks.sync_session")
@@ -165,6 +190,7 @@ class TestRunAnalysisPipelineTask:
         mock_sync_session.return_value = mock_db
 
         from app.workers.video_tasks import run_analysis_pipeline_task
+
         result = run_analysis_pipeline_task(_VIDEO_ID, _S3_KEY)
 
         assert result["decision"] == "approved"
@@ -185,6 +211,7 @@ class TestRunAnalysisPipelineTask:
         mock_sync_session.return_value = mock_db
 
         from app.workers.video_tasks import run_analysis_pipeline_task
+
         run_analysis_pipeline_task(_VIDEO_ID, _S3_KEY)
 
         mock_db.add.assert_not_called()
@@ -196,6 +223,7 @@ class TestRunAnalysisPipelineTask:
         mock_run.side_effect = RuntimeError("LangGraph error")
 
         from app.workers.video_tasks import run_analysis_pipeline_task
+
         with pytest.raises(Exception):  # noqa: B017 — retry wraps varied error types
             run_analysis_pipeline_task.apply(args=[_VIDEO_ID, _S3_KEY]).get(propagate=True)
 
@@ -203,6 +231,7 @@ class TestRunAnalysisPipelineTask:
 
 
 # ── process_video ──────────────────────────────────────────────────────────────
+
 
 class TestProcessVideo:
     @patch("app.workers.video_tasks.run_analysis_pipeline_task")
@@ -218,12 +247,23 @@ class TestProcessVideo:
         mock_thumbnail,
         mock_pipeline,
     ):
-        mock_frames.return_value = {"frames": ["f1"], "timestamps": [0.0], "fps": 25.0, "duration": 10.0}
-        mock_transcribe.return_value = {"text": "hello", "segments": [], "language": "en", "error": None}
+        mock_frames.return_value = {
+            "frames": ["f1"],
+            "timestamps": [0.0],
+            "fps": 25.0,
+            "duration": 10.0,
+        }
+        mock_transcribe.return_value = {
+            "text": "hello",
+            "segments": [],
+            "language": "en",
+            "error": None,
+        }
         mock_thumbnail.return_value = f"thumbnails/{_VIDEO_ID}.jpg"
         mock_pipeline.return_value = {"decision": "approved", "confidence": 0.9}
 
         from app.workers.video_tasks import process_video
+
         result = process_video(_VIDEO_ID, _S3_KEY)
 
         assert result["decision"] == "approved"
@@ -251,6 +291,7 @@ class TestProcessVideo:
         mock_pipeline.return_value = {"decision": "approved", "confidence": 0.8}
 
         from app.workers.video_tasks import process_video
+
         result = process_video(_VIDEO_ID, _S3_KEY)
 
         # Pipeline still completes despite thumbnail failure

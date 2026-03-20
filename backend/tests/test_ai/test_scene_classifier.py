@@ -1,6 +1,7 @@
 """Tests for A-05 SceneClassifierAgent — OpenAI mocked."""
+
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -16,6 +17,7 @@ def agent():
 @pytest.fixture()
 def mock_openai_response():
     """Build a fake OpenAI chat completion response."""
+
     def _make(payload: dict):
         msg = MagicMock()
         msg.content = json.dumps(payload)
@@ -24,6 +26,7 @@ def mock_openai_response():
         resp = MagicMock()
         resp.choices = [choice]
         return resp
+
     return _make
 
 
@@ -42,11 +45,13 @@ async def test_classifies_single_frame(agent, mock_openai_response):
     mock_client = MagicMock()
     mock_client.chat.completions.create = AsyncMock(return_value=fake_resp)
     agent._client = mock_client
-    result = await agent.run({
-        "video_id": "v1",
-        "frames": ["abc123"],
-        "frame_timestamps": [0.0],
-    })
+    result = await agent.run(
+        {
+            "video_id": "v1",
+            "frames": ["abc123"],
+            "frame_timestamps": [0.0],
+        }
+    )
 
     classifications = result["scene_classifications"]
     assert len(classifications) == 1
@@ -62,11 +67,13 @@ async def test_classifies_multiple_frames(agent, mock_openai_response):
     mock_client = MagicMock()
     mock_client.chat.completions.create = AsyncMock(return_value=fake_resp)
     agent._client = mock_client
-    result = await agent.run({
-        "video_id": "v2",
-        "frames": ["f1", "f2", "f3"],
-        "frame_timestamps": [0.0, 5.0, 10.0],
-    })
+    result = await agent.run(
+        {
+            "video_id": "v2",
+            "frames": ["f1", "f2", "f3"],
+            "frame_timestamps": [0.0, 5.0, 10.0],
+        }
+    )
 
     assert len(result["scene_classifications"]) == 3
     for sc in result["scene_classifications"]:
@@ -78,11 +85,13 @@ async def test_api_error_adds_to_errors(agent):
     mock_client = MagicMock()
     mock_client.chat.completions.create = AsyncMock(side_effect=Exception("API unavailable"))
     agent._client = mock_client
-    result = await agent.run({
-        "video_id": "v3",
-        "frames": ["frame1"],
-        "frame_timestamps": [0.0],
-    })
+    result = await agent.run(
+        {
+            "video_id": "v3",
+            "frames": ["frame1"],
+            "frame_timestamps": [0.0],
+        }
+    )
 
     # Frame fails gracefully — no classifications, error recorded
     assert result["scene_classifications"] == []

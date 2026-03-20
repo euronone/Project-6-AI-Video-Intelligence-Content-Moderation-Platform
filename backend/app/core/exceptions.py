@@ -1,6 +1,6 @@
 from fastapi import Request, status
-from fastapi.responses import ORJSONResponse
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import ORJSONResponse
 
 
 class AppException(Exception):
@@ -21,6 +21,7 @@ class AppException(Exception):
 
 
 # ── Common pre-built exceptions ───────────────────────────────────────────────
+
 
 class NotFoundError(AppException):
     def __init__(self, resource: str, resource_id: str = "") -> None:
@@ -70,6 +71,7 @@ class ValidationError(AppException):
 
 # ── Exception handlers ────────────────────────────────────────────────────────
 
+
 def _error_envelope(code: str, message: str, details: dict) -> dict:
     return {"error": {"code": code, "message": message, "details": details}}
 
@@ -87,7 +89,7 @@ async def validation_exception_handler(
     details = {
         "fields": [
             {
-                "loc": " -> ".join(str(l) for l in e["loc"]),
+                "loc": " -> ".join(str(part) for part in e["loc"]),
                 "msg": e["msg"],
                 "type": e["type"],
             }

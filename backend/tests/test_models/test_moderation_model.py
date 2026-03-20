@@ -1,4 +1,5 @@
 """Tests for D-03 ModerationResult and ModerationQueueItem models."""
+
 from __future__ import annotations
 
 import uuid

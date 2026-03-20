@@ -1,4 +1,5 @@
 """Tests for S-02 VideoService — DB and storage mocked."""
+
 from __future__ import annotations
 
 import uuid
@@ -8,7 +9,6 @@ import pytest
 
 from app.core.exceptions import ForbiddenError, NotFoundError
 from app.models.video import VideoStatus
-
 
 # ── Fixtures ───────────────────────────────────────────────────────────────────
 
@@ -61,6 +61,7 @@ def _make_storage():
 
 # ── generate_upload_url ────────────────────────────────────────────────────────
 
+
 class TestGenerateUploadUrl:
     def test_returns_presigned_url_response(self):
         from app.services.video_service import VideoService
@@ -77,6 +78,7 @@ class TestGenerateUploadUrl:
 
 
 # ── create_video ───────────────────────────────────────────────────────────────
+
 
 class TestCreateVideo:
     @pytest.mark.asyncio
@@ -99,12 +101,14 @@ class TestCreateVideo:
         body.content_type = "video/mp4"
         body.tags = None
 
-        with patch("app.services.video_service.Video", return_value=video), \
-             patch("app.workers.video_tasks.process_video") as mock_task, \
-             patch("app.services.video_service._build_video_response", return_value=MagicMock()):
+        with (
+            patch("app.services.video_service.Video", return_value=video),
+            patch("app.workers.video_tasks.process_video") as mock_task,
+            patch("app.services.video_service._build_video_response", return_value=MagicMock()),
+        ):
             mock_task.delay = MagicMock()
             service = VideoService(db=db, storage=storage)
-            result = await service.create_video(_OWNER_ID, None, body)
+            await service.create_video(_OWNER_ID, None, body)
 
         db.add.assert_called_once()
         db.flush.assert_awaited_once()
@@ -112,6 +116,7 @@ class TestCreateVideo:
 
 
 # ── get_video ──────────────────────────────────────────────────────────────────
+
 
 class TestGetVideo:
     @pytest.mark.asyncio
@@ -122,7 +127,9 @@ class TestGetVideo:
         db = _make_db(video=video)
         storage = _make_storage()
 
-        with patch("app.services.video_service._build_video_response", return_value=MagicMock()) as mock_build:
+        with patch(
+            "app.services.video_service._build_video_response", return_value=MagicMock()
+        ) as mock_build:
             service = VideoService(db=db, storage=storage)
             result = await service.get_video(_VID_ID, _OWNER_ID)
 
@@ -156,6 +163,7 @@ class TestGetVideo:
 
 # ── get_video_status ───────────────────────────────────────────────────────────
 
+
 class TestGetVideoStatus:
     @pytest.mark.asyncio
     async def test_returns_status_response(self):
@@ -183,6 +191,7 @@ class TestGetVideoStatus:
 
 
 # ── delete_video ───────────────────────────────────────────────────────────────
+
 
 class TestDeleteVideo:
     @pytest.mark.asyncio

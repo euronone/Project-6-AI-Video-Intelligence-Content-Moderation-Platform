@@ -42,6 +42,7 @@ async def redis_client():
     """Fake async Redis client."""
     try:
         import fakeredis.aioredis as fakeredis
+
         client = fakeredis.FakeRedis(decode_responses=True)
         yield client
         await client.aclose()
@@ -62,9 +63,7 @@ async def client(db_session, redis_client):
     app.dependency_overrides[get_db] = _get_db
     app.dependency_overrides[get_redis] = _get_redis
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
 
     app.dependency_overrides.clear()
@@ -74,7 +73,9 @@ async def client(db_session, redis_client):
 async def admin_token(client: AsyncClient, db_session: AsyncSession) -> str:
     """Register a user, promote to ADMIN in DB, and return a fresh access token."""
     import uuid
+
     from sqlalchemy import update
+
     from app.models.user import User, UserRole
 
     resp = await client.post(
@@ -83,9 +84,7 @@ async def admin_token(client: AsyncClient, db_session: AsyncSession) -> str:
     )
     user_id = uuid.UUID(resp.json()["user"]["id"])
 
-    await db_session.execute(
-        update(User).where(User.id == user_id).values(role=UserRole.ADMIN)
-    )
+    await db_session.execute(update(User).where(User.id == user_id).values(role=UserRole.ADMIN))
     await db_session.commit()
 
     # Re-login to get a token (role is read from DB on each request so same token works,

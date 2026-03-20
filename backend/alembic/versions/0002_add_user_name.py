@@ -4,12 +4,14 @@ Revision ID: 0002_add_user_name
 Revises: 0001_initial_schema
 Create Date: 2026-03-18
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision: str = "0002_add_user_name"
 down_revision: str | None = "0001_initial_schema"

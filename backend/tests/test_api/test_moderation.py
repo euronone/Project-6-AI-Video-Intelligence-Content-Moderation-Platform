@@ -1,4 +1,5 @@
 """Tests for /api/v1/moderation endpoints."""
+
 import pytest
 from httpx import AsyncClient
 

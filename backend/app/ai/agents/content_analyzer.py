@@ -4,6 +4,7 @@ A-02 Content Analyzer Agent
 Uses GPT-4o vision on sampled frames + transcript to produce a high-level
 content analysis: summary, topics, sentiment, language.
 """
+
 from __future__ import annotations
 
 import json
@@ -18,7 +19,7 @@ from app.ai.schemas import ContentAnalysisResult
 logger = structlog.get_logger(__name__)
 
 _MODEL = "gpt-4o"
-_MAX_FRAMES_FOR_ANALYSIS = 8   # send at most 8 frames to keep token usage reasonable
+_MAX_FRAMES_FOR_ANALYSIS = 8  # send at most 8 frames to keep token usage reasonable
 
 
 class ContentAnalyzerAgent(BaseAgent):
@@ -53,9 +54,7 @@ class ContentAnalyzerAgent(BaseAgent):
                 "completed_agents": self._mark_completed(state),
             }
 
-    async def _analyze(
-        self, frames: list[str], transcript: str
-    ) -> ContentAnalysisResult:
+    async def _analyze(self, frames: list[str], transcript: str) -> ContentAnalysisResult:
         content: list[dict] = []
 
         # Attach frames as image_url entries

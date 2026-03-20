@@ -27,6 +27,7 @@ Public API:
     result.reasoning            # str
     result.recommended_action   # str
 """
+
 from __future__ import annotations
 
 import json
@@ -45,6 +46,7 @@ logger = structlog.get_logger(__name__)
 _MODEL = "gpt-4o"
 
 # ── Output schema ─────────────────────────────────────────────────────────────
+
 
 class ModerationChainOutput(BaseModel):
     decision: ModerationDecision = ModerationDecision.NEEDS_REVIEW
@@ -114,6 +116,7 @@ Return only the JSON object.
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
+
 async def run_moderation_chain(
     content_summary: str = "",
     violations: list[dict[str, Any]] | None = None,
@@ -140,16 +143,12 @@ async def run_moderation_chain(
     llm = _llm or ChatOpenAI(
         model=_MODEL,
         openai_api_key=settings.OPENAI_API_KEY,
-        temperature=0.1,   # low temperature for more deterministic decisions
+        temperature=0.1,  # low temperature for more deterministic decisions
     )
 
-    violations_str = (
-        json.dumps(violations, indent=2) if violations else "No violations detected."
-    )
+    violations_str = json.dumps(violations, indent=2) if violations else "No violations detected."
     policy_str = (
-        json.dumps(policy_rules, indent=2)
-        if policy_rules
-        else "Default platform policies apply."
+        json.dumps(policy_rules, indent=2) if policy_rules else "Default platform policies apply."
     )
     scene_str = json.dumps(scene_summary) if scene_summary else "{}"
 

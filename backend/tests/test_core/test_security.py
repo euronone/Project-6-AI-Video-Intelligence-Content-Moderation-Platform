@@ -1,4 +1,5 @@
 """Tests for app.core.security — JWT, password hashing, token keys."""
+
 import time
 
 import pytest
@@ -12,7 +13,6 @@ from app.core.security import (
     refresh_token_key,
     verify_password,
 )
-
 
 # ── Password ──────────────────────────────────────────────────────────────────
 

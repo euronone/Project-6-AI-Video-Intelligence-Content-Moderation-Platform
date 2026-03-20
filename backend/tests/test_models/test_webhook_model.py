@@ -1,4 +1,5 @@
 """Tests for D-07 WebhookEndpoint model."""
+
 from __future__ import annotations
 
 import uuid

@@ -2,6 +2,7 @@
 Webhooks API — B-07
 Register, manage, and test outbound webhook endpoints.
 """
+
 import hashlib
 import hmac
 import json
@@ -38,6 +39,7 @@ def _sign_payload(secret: str, payload: bytes) -> str:
 
 # ── GET /webhooks ─────────────────────────────────────────────────────────────
 
+
 @router.get("", response_model=WebhookListResponse, summary="List registered webhook endpoints")
 async def list_webhooks(
     current_user: CurrentUser,
@@ -55,6 +57,7 @@ async def list_webhooks(
 
 
 # ── POST /webhooks ────────────────────────────────────────────────────────────
+
 
 @router.post(
     "",
@@ -91,7 +94,12 @@ async def create_webhook(
 
 # ── GET /webhooks/{id} ────────────────────────────────────────────────────────
 
-@router.get("/{endpoint_id}", response_model=WebhookResponse, summary="Get webhook detail and delivery stats")
+
+@router.get(
+    "/{endpoint_id}",
+    response_model=WebhookResponse,
+    summary="Get webhook detail and delivery stats",
+)
 async def get_webhook(
     endpoint_id: uuid.UUID,
     current_user: CurrentUser,
@@ -111,6 +119,7 @@ async def get_webhook(
 
 # ── PUT /webhooks/{id} ────────────────────────────────────────────────────────
 
+
 @router.put("/{endpoint_id}", response_model=WebhookResponse, summary="Update a webhook endpoint")
 async def update_webhook(
     endpoint_id: uuid.UUID,
@@ -118,9 +127,7 @@ async def update_webhook(
     current_user: AdminUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> WebhookResponse:
-    result = await db.execute(
-        select(WebhookEndpoint).where(WebhookEndpoint.id == endpoint_id)
-    )
+    result = await db.execute(select(WebhookEndpoint).where(WebhookEndpoint.id == endpoint_id))
     endpoint = result.scalar_one_or_none()
     if not endpoint:
         raise NotFoundError("WebhookEndpoint", str(endpoint_id))
@@ -143,6 +150,7 @@ async def update_webhook(
 
 # ── DELETE /webhooks/{id} ─────────────────────────────────────────────────────
 
+
 @router.delete(
     "/{endpoint_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -153,9 +161,7 @@ async def delete_webhook(
     current_user: AdminUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
-    result = await db.execute(
-        select(WebhookEndpoint).where(WebhookEndpoint.id == endpoint_id)
-    )
+    result = await db.execute(select(WebhookEndpoint).where(WebhookEndpoint.id == endpoint_id))
     endpoint = result.scalar_one_or_none()
     if not endpoint:
         raise NotFoundError("WebhookEndpoint", str(endpoint_id))
@@ -164,6 +170,7 @@ async def delete_webhook(
 
 
 # ── POST /webhooks/test/{id} ──────────────────────────────────────────────────
+
 
 @router.post(
     "/test/{endpoint_id}",
@@ -175,9 +182,7 @@ async def test_webhook(
     current_user: AdminUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> MessageResponse:
-    result = await db.execute(
-        select(WebhookEndpoint).where(WebhookEndpoint.id == endpoint_id)
-    )
+    result = await db.execute(select(WebhookEndpoint).where(WebhookEndpoint.id == endpoint_id))
     endpoint = result.scalar_one_or_none()
     if not endpoint:
         raise NotFoundError("WebhookEndpoint", str(endpoint_id))

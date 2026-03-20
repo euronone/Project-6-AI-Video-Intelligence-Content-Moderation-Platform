@@ -13,6 +13,7 @@ Public entry points:
     dispatch_webhooks_task.delay(event, payload)
     enqueue_human_review_task.delay(video_id, moderation_result_id, priority)
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -42,6 +43,7 @@ _WEBHOOK_TIMEOUT_SECONDS = 10
 
 
 # ── W-03-A: Run / re-run moderation workflow ───────────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -120,6 +122,7 @@ def run_moderation_task(
 
 # ── W-03-B: Apply policy rules ─────────────────────────────────────────────────
 
+
 @shared_task(
     bind=True,
     name="app.workers.moderation_tasks.apply_policy_task",
@@ -162,7 +165,11 @@ def apply_policy_task(
                     moderation_result_id=moderation_result_id,
                     policy_id=policy_id,
                 )
-                return {"moderation_result_id": moderation_result_id, "new_status": "not_found", "policy_id": policy_id}
+                return {
+                    "moderation_result_id": moderation_result_id,
+                    "new_status": "not_found",
+                    "policy_id": policy_id,
+                }
 
             violations: list[dict] = mod.violations or []
             rules: list[dict] = policy.rules or []
@@ -206,6 +213,7 @@ def apply_policy_task(
 
 
 # ── W-03-C: Dispatch outbound webhooks ────────────────────────────────────────
+
 
 @shared_task(
     bind=True,
@@ -252,9 +260,7 @@ def dispatch_webhooks_task(
         headers: dict[str, str] = {"Content-Type": "application/json", "X-VidShield-Event": event}
 
         if endpoint.secret:
-            sig = hmac.new(
-                endpoint.secret.encode("utf-8"), body, hashlib.sha256
-            ).hexdigest()
+            sig = hmac.new(endpoint.secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
             headers["X-VidShield-Signature"] = f"sha256={sig}"
 
         try:
@@ -305,6 +311,7 @@ def dispatch_webhooks_task(
 
 
 # ── W-03-D: Enqueue human review ──────────────────────────────────────────────
+
 
 @shared_task(
     bind=True,

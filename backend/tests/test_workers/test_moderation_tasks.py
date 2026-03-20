@@ -1,4 +1,5 @@
 """Tests for W-03 — moderation_tasks (all external I/O mocked)."""
+
 from __future__ import annotations
 
 import uuid
@@ -12,6 +13,7 @@ _POLICY_ID = str(uuid.uuid4())
 
 
 # ── run_moderation_task ────────────────────────────────────────────────────────
+
 
 class TestRunModerationTask:
     @patch("app.workers.moderation_tasks.sync_session")
@@ -37,6 +39,7 @@ class TestRunModerationTask:
         mock_sync_session.return_value = mock_db
 
         from app.workers.moderation_tasks import run_moderation_task
+
         result = run_moderation_task(_VIDEO_ID)
 
         assert result["decision"] == "approved"
@@ -47,6 +50,7 @@ class TestRunModerationTask:
         mock_run.side_effect = RuntimeError("graph failure")
 
         from app.workers.moderation_tasks import run_moderation_task
+
         with pytest.raises(Exception):  # noqa: B017 — retry wraps varied error types
             run_moderation_task.apply(args=[_VIDEO_ID]).get(propagate=True)
 
@@ -72,13 +76,14 @@ class TestRunModerationTask:
         mock_sync_session.return_value = mock_db
 
         from app.workers.moderation_tasks import run_moderation_task
-        from app.models.moderation import ModerationStatus
+
         result = run_moderation_task(_VIDEO_ID)
 
         assert result["escalated"] is True
 
 
 # ── apply_policy_task ──────────────────────────────────────────────────────────
+
 
 class TestApplyPolicyTask:
     def _make_db_session(self, mod_result=None, policy=None):
@@ -104,12 +109,11 @@ class TestApplyPolicyTask:
         mock_db = MagicMock()
         mock_db.__enter__ = lambda s: mock_db
         mock_db.__exit__ = MagicMock(return_value=False)
-        mock_db.get.side_effect = lambda model, _id: (
-            mod if model is ModerationResult else policy
-        )
+        mock_db.get.side_effect = lambda model, _id: mod if model is ModerationResult else policy
         mock_sync_session.return_value = mock_db
 
         from app.workers.moderation_tasks import apply_policy_task
+
         result = apply_policy_task(_MOD_RESULT_ID, _POLICY_ID)
 
         assert result["new_status"] == "rejected"
@@ -123,6 +127,7 @@ class TestApplyPolicyTask:
         mock_sync_session.return_value = mock_db
 
         from app.workers.moderation_tasks import apply_policy_task
+
         result = apply_policy_task(_MOD_RESULT_ID, _POLICY_ID)
 
         assert result["new_status"] == "not_found"
@@ -141,18 +146,18 @@ class TestApplyPolicyTask:
         mock_db = MagicMock()
         mock_db.__enter__ = lambda s: mock_db
         mock_db.__exit__ = MagicMock(return_value=False)
-        mock_db.get.side_effect = lambda model, _id: (
-            mod if model is ModerationResult else policy
-        )
+        mock_db.get.side_effect = lambda model, _id: mod if model is ModerationResult else policy
         mock_sync_session.return_value = mock_db
 
         from app.workers.moderation_tasks import apply_policy_task
+
         result = apply_policy_task(_MOD_RESULT_ID, _POLICY_ID)
 
         assert result["new_status"] == "pending"
 
 
 # ── dispatch_webhooks_task ─────────────────────────────────────────────────────
+
 
 class TestDispatchWebhooksTask:
     @patch("app.workers.moderation_tasks.httpx.post")
@@ -167,6 +172,7 @@ class TestDispatchWebhooksTask:
 
         # First call returns list of endpoints, subsequent calls return the endpoint for update
         call_count = [0]
+
         def session_side_effect():
             mock_db = MagicMock()
             mock_db.__enter__ = lambda s: mock_db
@@ -177,6 +183,7 @@ class TestDispatchWebhooksTask:
             else:
                 mock_db.get.return_value = endpoint
             return mock_db
+
         mock_sync_session.side_effect = session_side_effect
 
         mock_resp = MagicMock()
@@ -185,6 +192,7 @@ class TestDispatchWebhooksTask:
         mock_post.return_value = mock_resp
 
         from app.workers.moderation_tasks import dispatch_webhooks_task
+
         result = dispatch_webhooks_task("moderation.flagged", {"video_id": _VIDEO_ID})
 
         assert result["delivered"] == 1
@@ -206,6 +214,7 @@ class TestDispatchWebhooksTask:
         mock_sync_session.return_value = mock_db
 
         from app.workers.moderation_tasks import dispatch_webhooks_task
+
         result = dispatch_webhooks_task("moderation.flagged", {"video_id": _VIDEO_ID})
 
         assert result["skipped"] == 1
@@ -220,12 +229,14 @@ class TestDispatchWebhooksTask:
         mock_sync_session.return_value = mock_db
 
         from app.workers.moderation_tasks import dispatch_webhooks_task
+
         result = dispatch_webhooks_task("moderation.flagged", {})
 
         assert result == {"delivered": 0, "failed": 0, "skipped": 0}
 
 
 # ── enqueue_human_review_task ──────────────────────────────────────────────────
+
 
 class TestEnqueueHumanReviewTask:
     @patch("app.workers.moderation_tasks.sync_session")
@@ -240,10 +251,12 @@ class TestEnqueueHumanReviewTask:
 
         def add_side_effect(item):
             item.id = new_item.id
+
         mock_db.add.side_effect = add_side_effect
         mock_sync_session.return_value = mock_db
 
         from app.workers.moderation_tasks import enqueue_human_review_task
+
         result = enqueue_human_review_task(_VIDEO_ID, _MOD_RESULT_ID)
 
         assert result["created"] is True
@@ -261,6 +274,7 @@ class TestEnqueueHumanReviewTask:
         mock_sync_session.return_value = mock_db
 
         from app.workers.moderation_tasks import enqueue_human_review_task
+
         result = enqueue_human_review_task(_VIDEO_ID)
 
         assert result["created"] is False

@@ -12,23 +12,24 @@ Public API:
     await service.broadcast_event(stream_id, event_name, data) -> None
     await service.subscribe_websocket(stream_id, websocket, token) -> None
 """
+
 from __future__ import annotations
 
+import contextlib
 import json
 import uuid
 from datetime import datetime
 from typing import Any
 
+import redis.asyncio as aioredis
 import structlog
 from fastapi import WebSocket, WebSocketDisconnect
 from jose import JWTError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import redis.asyncio as aioredis
-
 from app.config import settings
-from app.core.exceptions import ForbiddenError, NotFoundError, UnauthorizedError
+from app.core.exceptions import NotFoundError
 from app.core.security import decode_token
 from app.models.alert import LiveStream, StreamStatus
 from app.schemas.live import StreamCreate, StreamListResponse, StreamResponse
@@ -72,9 +73,7 @@ class StreamService:
         if active_only:
             q = q.where(LiveStream.status == StreamStatus.ACTIVE)
 
-        total_result = await self._db.execute(
-            select(func.count()).select_from(q.subquery())
-        )
+        total_result = await self._db.execute(select(func.count()).select_from(q.subquery()))
         total = total_result.scalar_one()
 
         result = await self._db.execute(q.order_by(LiveStream.created_at.desc()))
@@ -130,9 +129,7 @@ class StreamService:
         Raises:
             NotFoundError: If the stream doesn't exist.
         """
-        result = await self._db.execute(
-            select(LiveStream).where(LiveStream.id == stream_id)
-        )
+        result = await self._db.execute(select(LiveStream).where(LiveStream.id == stream_id))
         stream = result.scalar_one_or_none()
         if not stream:
             raise NotFoundError("LiveStream", str(stream_id))
@@ -148,9 +145,7 @@ class StreamService:
         Raises:
             NotFoundError: If the stream doesn't exist.
         """
-        result = await self._db.execute(
-            select(LiveStream).where(LiveStream.id == stream_id)
-        )
+        result = await self._db.execute(select(LiveStream).where(LiveStream.id == stream_id))
         stream = result.scalar_one_or_none()
         if not stream:
             raise NotFoundError("LiveStream", str(stream_id))
@@ -190,10 +185,8 @@ class StreamService:
                 except Exception:
                     dead.append(ws)
             for ws in dead:
-                try:
+                with contextlib.suppress(ValueError):
                     _ws_connections[sid].remove(ws)
-                except ValueError:
-                    pass
 
         # Publish to Redis channel
         channel = f"{_REDIS_CHANNEL_PREFIX}:{sid}:events"
@@ -249,7 +242,5 @@ class StreamService:
             logger.info("ws_client_disconnected", stream_id=sid)
         finally:
             if sid in _ws_connections:
-                try:
+                with contextlib.suppress(ValueError):
                     _ws_connections[sid].remove(websocket)
-                except ValueError:
-                    pass
