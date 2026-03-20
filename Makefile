@@ -66,10 +66,10 @@ push:
 
 # ── Infrastructure ────────────────────────────────────────────────────────────
 tf-plan:
-	cd terraform/environments && terraform plan -var-file=$(ENV).tfvars
+	cd terraform && terraform plan -var-file=environments/$(ENV).tfvars
 
 tf-apply:
-	cd terraform/environments && terraform apply -var-file=$(ENV).tfvars
+	cd terraform && terraform apply -var-file=environments/$(ENV).tfvars
 
 deploy:
 	@echo "Deploying to $(ENV)..."
