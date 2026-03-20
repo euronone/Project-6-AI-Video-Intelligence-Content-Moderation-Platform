@@ -217,3 +217,14 @@ frontend/.mock-data/
 .cache/
 tmp/
 temp/
+
+# ────────────────────────────────────────────────────────────
+# Landing page / static assets (generated)
+# ────────────────────────────────────────────────────────────
+# Next.js static export output (if using next export)
+frontend/out/
+# Storybook build output (if added later)
+frontend/storybook-static/
+# Bundle analysis reports
+frontend/.next/analyze/
+frontend/bundle-analyzer-report.html
