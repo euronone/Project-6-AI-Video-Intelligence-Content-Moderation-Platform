@@ -47,8 +47,8 @@ domain_aliases         = []
 cors_origins           = "[\"*\"]"
 
 # Monitoring
-api_5xx_threshold = 50  # less sensitive in dev
-alarm_email       = ""  # set to your email to receive dev alerts
+api_5xx_threshold = 50 # less sensitive in dev
+alarm_email       = "" # set to your email to receive dev alerts
 
 # Secrets — set via TF_VAR_* environment variables or AWS Secrets Manager ARNs
 # db_password_secret_arn  = "arn:aws:secretsmanager:us-east-1:<account>:secret:vidshield/dev/db-password-xxxx"

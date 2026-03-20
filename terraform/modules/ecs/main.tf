@@ -63,7 +63,7 @@ resource "aws_iam_role" "ecs_execution" {
   name = "${local.name_prefix}-ecs-execution-role"
 
   assume_role_policy = jsonencode({
-    Version   = "2012-10-17"
+    Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow"
       Principal = { Service = "ecs-tasks.amazonaws.com" }
@@ -84,10 +84,10 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
   role = aws_iam_role.ecs_execution.id
 
   policy = jsonencode({
-    Version   = "2012-10-17"
+    Version = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = ["secretsmanager:GetSecretValue"]
+      Effect = "Allow"
+      Action = ["secretsmanager:GetSecretValue"]
       Resource = compact([
         var.db_secret_arn,
         var.redis_secret_arn,
@@ -106,7 +106,7 @@ resource "aws_iam_role" "ecs_task" {
   name = "${local.name_prefix}-ecs-task-role"
 
   assume_role_policy = jsonencode({
-    Version   = "2012-10-17"
+    Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow"
       Principal = { Service = "ecs-tasks.amazonaws.com" }
@@ -122,11 +122,11 @@ resource "aws_iam_role_policy" "ecs_task_s3" {
   role = aws_iam_role.ecs_task.id
 
   policy = jsonencode({
-    Version   = "2012-10-17"
+    Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = [
+        Effect = "Allow"
+        Action = [
           "s3:GetObject",
           "s3:PutObject",
           "s3:DeleteObject",
@@ -140,8 +140,8 @@ resource "aws_iam_role_policy" "ecs_task_s3" {
         ]
       },
       {
-        Effect   = "Allow"
-        Action   = ["s3:ListBucket"]
+        Effect = "Allow"
+        Action = ["s3:ListBucket"]
         Resource = [
           "arn:aws:s3:::${var.s3_videos_bucket}",
           "arn:aws:s3:::${var.s3_thumbnails_bucket}",
@@ -296,19 +296,19 @@ resource "aws_ecs_task_definition" "api" {
       ]
 
       environment = [
-        { name = "APP_ENV",    value = var.environment },
+        { name = "APP_ENV", value = var.environment },
         { name = "AWS_REGION", value = var.aws_region },
-        { name = "S3_BUCKET_VIDEOS",    value = var.s3_videos_bucket },
+        { name = "S3_BUCKET_VIDEOS", value = var.s3_videos_bucket },
         { name = "S3_BUCKET_THUMBNAILS", value = var.s3_thumbnails_bucket },
-        { name = "S3_BUCKET_ARTIFACTS",  value = var.s3_artifacts_bucket },
+        { name = "S3_BUCKET_ARTIFACTS", value = var.s3_artifacts_bucket },
         { name = "CORS_ORIGINS", value = var.cors_origins },
       ]
 
       secrets = concat(
         [
-          { name = "DATABASE_URL",  valueFrom = var.db_secret_arn },
-          { name = "REDIS_URL",     valueFrom = var.redis_secret_arn },
-          { name = "SECRET_KEY",    valueFrom = var.secret_key_arn },
+          { name = "DATABASE_URL", valueFrom = var.db_secret_arn },
+          { name = "REDIS_URL", valueFrom = var.redis_secret_arn },
+          { name = "SECRET_KEY", valueFrom = var.secret_key_arn },
           { name = "OPENAI_API_KEY", valueFrom = var.openai_api_key_arn },
           { name = "PINECONE_API_KEY", valueFrom = var.pinecone_api_key_arn },
         ],
@@ -358,19 +358,19 @@ resource "aws_ecs_task_definition" "worker" {
       ]
 
       environment = [
-        { name = "APP_ENV",    value = var.environment },
+        { name = "APP_ENV", value = var.environment },
         { name = "AWS_REGION", value = var.aws_region },
-        { name = "S3_BUCKET_VIDEOS",    value = var.s3_videos_bucket },
+        { name = "S3_BUCKET_VIDEOS", value = var.s3_videos_bucket },
         { name = "S3_BUCKET_THUMBNAILS", value = var.s3_thumbnails_bucket },
-        { name = "S3_BUCKET_ARTIFACTS",  value = var.s3_artifacts_bucket },
+        { name = "S3_BUCKET_ARTIFACTS", value = var.s3_artifacts_bucket },
       ]
 
       secrets = concat(
         [
-          { name = "DATABASE_URL",     valueFrom = var.db_secret_arn },
-          { name = "REDIS_URL",        valueFrom = var.redis_secret_arn },
-          { name = "SECRET_KEY",       valueFrom = var.secret_key_arn },
-          { name = "OPENAI_API_KEY",   valueFrom = var.openai_api_key_arn },
+          { name = "DATABASE_URL", valueFrom = var.db_secret_arn },
+          { name = "REDIS_URL", valueFrom = var.redis_secret_arn },
+          { name = "SECRET_KEY", valueFrom = var.secret_key_arn },
+          { name = "OPENAI_API_KEY", valueFrom = var.openai_api_key_arn },
           { name = "PINECONE_API_KEY", valueFrom = var.pinecone_api_key_arn },
         ],
         var.sentry_dsn_arn != "" ? [{ name = "SENTRY_DSN", valueFrom = var.sentry_dsn_arn }] : [],
@@ -409,7 +409,7 @@ resource "aws_ecs_task_definition" "frontend" {
       ]
 
       environment = [
-        { name = "NEXT_PUBLIC_APP_ENV",  value = var.environment },
+        { name = "NEXT_PUBLIC_APP_ENV", value = var.environment },
         { name = "NEXT_PUBLIC_MOCK_API", value = "false" },
       ]
 

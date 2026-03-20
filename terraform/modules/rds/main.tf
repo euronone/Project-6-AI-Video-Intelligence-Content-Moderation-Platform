@@ -69,8 +69,8 @@ resource "aws_db_instance" "this" {
   vpc_security_group_ids = [var.security_group_id]
   parameter_group_name   = aws_db_parameter_group.postgres16.name
 
-  multi_az               = var.multi_az
-  publicly_accessible    = false
+  multi_az            = var.multi_az
+  publicly_accessible = false
 
   backup_retention_period = var.backup_retention_days
   backup_window           = "03:00-04:00"
