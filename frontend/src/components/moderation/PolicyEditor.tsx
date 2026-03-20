@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
@@ -18,26 +17,24 @@ import type { Policy, ViolationCategory, PolicyAction } from '@/types/moderation
 const CATEGORIES: ViolationCategory[] = [
   'violence', 'nudity', 'drugs', 'hate_symbols', 'spam', 'misinformation', 'other',
 ];
-const ACTIONS: PolicyAction[] = ['auto_flag', 'auto_reject', 'escalate', 'notify'];
+const ACTIONS: PolicyAction[] = ['block', 'flag', 'allow'];
 const ACTION_LABELS: Record<PolicyAction, string> = {
-  auto_flag: 'Auto Flag',
-  auto_reject: 'Auto Reject',
-  escalate: 'Escalate',
-  notify: 'Notify',
+  block: 'Block',
+  flag: 'Flag',
+  allow: 'Allow',
 };
 
 const ruleSchema = z.object({
   category: z.enum(['violence', 'nudity', 'drugs', 'hate_symbols', 'spam', 'misinformation', 'other']),
   threshold: z.number().min(0).max(1),
-  action: z.enum(['auto_flag', 'auto_reject', 'escalate', 'notify']),
+  action: z.enum(['block', 'flag', 'allow']),
 });
 
 const policySchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   description: z.string().max(500).optional(),
-  categories: z.array(z.enum(['violence', 'nudity', 'drugs', 'hate_symbols', 'spam', 'misinformation', 'other'])).min(1, 'Select at least one category'),
   rules: z.array(ruleSchema),
-  actions: z.array(z.enum(['auto_flag', 'auto_reject', 'escalate', 'notify'])),
+  default_action: z.enum(['block', 'flag', 'allow']),
   is_active: z.boolean(),
 });
 
@@ -55,8 +52,6 @@ export function PolicyEditor({ policy, onSubmit, onCancel, isSubmitting }: Polic
     register,
     handleSubmit,
     control,
-    watch,
-    setValue,
     formState: { errors },
   } = useForm<PolicyFormValues>({
     resolver: zodResolver(policySchema),
@@ -64,17 +59,15 @@ export function PolicyEditor({ policy, onSubmit, onCancel, isSubmitting }: Polic
       ? {
           name: policy.name,
           description: policy.description ?? '',
-          categories: policy.categories,
-          rules: policy.rules,
-          actions: policy.actions,
+          rules: (policy.rules ?? []) as PolicyFormValues['rules'],
+          default_action: (policy.default_action ?? 'flag') as PolicyAction,
           is_active: policy.is_active,
         }
       : {
           name: '',
           description: '',
-          categories: [],
           rules: [],
-          actions: ['auto_flag'],
+          default_action: 'flag',
           is_active: true,
         },
   });
@@ -83,23 +76,6 @@ export function PolicyEditor({ policy, onSubmit, onCancel, isSubmitting }: Polic
     control,
     name: 'rules',
   });
-
-  const selectedCategories = watch('categories');
-  const selectedActions = watch('actions');
-
-  const toggleCategory = (cat: ViolationCategory) => {
-    const next = selectedCategories.includes(cat)
-      ? selectedCategories.filter((c) => c !== cat)
-      : [...selectedCategories, cat];
-    setValue('categories', next, { shouldValidate: true });
-  };
-
-  const toggleAction = (action: PolicyAction) => {
-    const next = selectedActions.includes(action)
-      ? selectedActions.filter((a) => a !== action)
-      : [...selectedActions, action];
-    setValue('actions', next);
-  };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -118,30 +94,6 @@ export function PolicyEditor({ policy, onSubmit, onCancel, isSubmitting }: Polic
 
       <Separator />
 
-      {/* Categories */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold">Content categories</h3>
-        {errors.categories && (
-          <p className="text-xs text-destructive">{errors.categories.message}</p>
-        )}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {CATEGORIES.map((cat) => (
-            <label
-              key={cat}
-              className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 hover:bg-accent"
-            >
-              <Checkbox
-                checked={selectedCategories.includes(cat)}
-                onCheckedChange={() => toggleCategory(cat)}
-              />
-              <span className="text-sm">{VIOLATION_CATEGORY_LABELS[cat]}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <Separator />
-
       {/* Rules */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
@@ -150,7 +102,7 @@ export function PolicyEditor({ policy, onSubmit, onCancel, isSubmitting }: Polic
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => appendRule({ category: 'violence', threshold: 0.7, action: 'auto_flag' })}
+            onClick={() => appendRule({ category: 'violence', threshold: 0.7, action: 'flag' })}
           >
             <Plus className="mr-1 h-3 w-3" />
             Add rule
@@ -234,20 +186,28 @@ export function PolicyEditor({ policy, onSubmit, onCancel, isSubmitting }: Polic
 
       <Separator />
 
-      {/* Default actions */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold">Default actions</h3>
-        <div className="flex flex-wrap gap-3">
-          {ACTIONS.map((action) => (
-            <label key={action} className="flex cursor-pointer items-center gap-2">
-              <Checkbox
-                checked={selectedActions.includes(action)}
-                onCheckedChange={() => toggleAction(action)}
-              />
-              <span className="text-sm">{ACTION_LABELS[action]}</span>
-            </label>
-          ))}
-        </div>
+      {/* Default action */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold">Default action</h3>
+        <p className="text-xs text-muted-foreground">Applied to content that does not match any rule.</p>
+        <Controller
+          control={control}
+          name="default_action"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ACTIONS.map((a) => (
+                  <SelectItem key={a} value={a}>
+                    {ACTION_LABELS[a]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
       </div>
 
       <Separator />

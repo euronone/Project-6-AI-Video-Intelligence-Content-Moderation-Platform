@@ -16,7 +16,7 @@ export type ViolationCategory =
 
 export type ReviewAction = 'approve' | 'reject' | 'escalate';
 
-export type PolicyAction = 'auto_flag' | 'auto_reject' | 'escalate' | 'notify';
+export type PolicyAction = 'block' | 'flag' | 'allow';
 
 export interface Violation {
   id: string;
@@ -78,10 +78,11 @@ export interface Policy {
   id: string;
   name: string;
   description?: string;
-  categories: ViolationCategory[];
-  rules: PolicyRule[];
-  actions: PolicyAction[];
   is_active: boolean;
+  is_default: boolean;
+  rules: PolicyRule[] | null;
+  default_action: PolicyAction;
+  owner_id: string;
   tenant_id?: string;
   created_at: string;
   updated_at: string;
@@ -91,8 +92,6 @@ export interface PolicyListResponse {
   data: {
     items: Policy[];
     total: number;
-    page: number;
-    page_size: number;
   };
 }
 
@@ -103,9 +102,10 @@ export interface PolicyResponse {
 export interface CreatePolicyRequest {
   name: string;
   description?: string;
-  categories: ViolationCategory[];
-  rules: PolicyRule[];
-  actions: PolicyAction[];
+  is_active?: boolean;
+  is_default?: boolean;
+  rules?: PolicyRule[];
+  default_action?: PolicyAction;
 }
 
 export interface ModerationQueueParams {

@@ -94,7 +94,7 @@ export function useUpdatePolicy() {
 
   return useMutation({
     mutationFn: ({ id, body }: { id: string; body: Partial<CreatePolicyRequest> }) =>
-      apiClient.patch<PolicyResponse>(`/policies/${id}`, body),
+      apiClient.put<PolicyResponse>(`/policies/${id}`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: moderationKeys.policies });
       toast.success('Policy updated');

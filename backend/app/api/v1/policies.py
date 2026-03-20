@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AdminUser, CurrentUser
+from app.api.deps import CurrentUser, OperatorUser
 from app.core.exceptions import NotFoundError, ValidationError
 from app.dependencies import get_db, get_redis
 from app.models.policy import Policy
@@ -64,7 +64,7 @@ async def list_policies(
 )
 async def create_policy(
     body: PolicyCreate,
-    current_user: AdminUser,
+    current_user: OperatorUser,
     db: Annotated[AsyncSession, Depends(get_db)],
     redis: Annotated[aioredis.Redis, Depends(get_redis)],
 ) -> PolicyResponse:
@@ -111,7 +111,7 @@ async def get_policy(
 async def update_policy(
     policy_id: uuid.UUID,
     body: PolicyUpdate,
-    current_user: AdminUser,
+    current_user: OperatorUser,
     db: Annotated[AsyncSession, Depends(get_db)],
     redis: Annotated[aioredis.Redis, Depends(get_redis)],
 ) -> PolicyResponse:
@@ -148,7 +148,7 @@ async def update_policy(
 )
 async def delete_policy(
     policy_id: uuid.UUID,
-    current_user: AdminUser,
+    current_user: OperatorUser,
     db: Annotated[AsyncSession, Depends(get_db)],
     redis: Annotated[aioredis.Redis, Depends(get_redis)],
 ) -> None:
