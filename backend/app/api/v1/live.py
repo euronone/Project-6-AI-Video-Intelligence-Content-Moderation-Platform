@@ -6,7 +6,7 @@ Stream registration, management, and real-time WebSocket events.
 import contextlib
 import json
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated
 
 import structlog
@@ -130,7 +130,7 @@ async def stop_stream(
         raise NotFoundError("LiveStream", str(stream_id))
 
     stream.status = StreamStatus.STOPPED
-    stream.stopped_at = datetime.now(datetime.UTC).isoformat()
+    stream.stopped_at = datetime.now(UTC).isoformat()
 
     # Notify connected WebSocket clients
     sid = str(stream_id)

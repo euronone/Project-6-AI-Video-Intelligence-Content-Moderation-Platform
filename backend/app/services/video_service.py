@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -320,7 +320,7 @@ class VideoService:
         if not video:
             raise NotFoundError("Video", str(video_id))
 
-        video.deleted_at = datetime.now(datetime.UTC).isoformat()
+        video.deleted_at = datetime.now(UTC).isoformat()
         video.status = VideoStatus.DELETED
 
         from app.workers.cleanup_tasks import cleanup_temp_frames_task

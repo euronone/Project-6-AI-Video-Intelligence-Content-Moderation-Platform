@@ -21,7 +21,7 @@ import hashlib
 import hmac
 import json
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -109,7 +109,7 @@ def run_moderation_task(
         if mod:
             mod.status = new_status
             mod.overall_confidence = result.confidence
-            mod.updated_at = datetime.now(datetime.UTC)
+            mod.updated_at = datetime.now(UTC)
 
     logger.info(
         "run_moderation_task_done",
@@ -194,7 +194,7 @@ def apply_policy_task(
 
             if new_status != mod.status:
                 mod.status = new_status
-                mod.updated_at = datetime.now(datetime.UTC)
+                mod.updated_at = datetime.now(UTC)
 
         logger.info(
             "apply_policy_task_done",
@@ -274,7 +274,7 @@ def dispatch_webhooks_task(
                 ep = db.get(WebhookEndpoint, endpoint.id)
                 if ep:
                     ep.total_deliveries += 1
-                    ep.last_delivery_at = datetime.now(datetime.UTC).isoformat()
+                    ep.last_delivery_at = datetime.now(UTC).isoformat()
                     ep.last_status_code = resp.status_code
                     if not resp.is_success:
                         ep.failed_deliveries += 1

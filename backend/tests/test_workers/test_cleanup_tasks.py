@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 
 def _utc_now():
-    return datetime.now(datetime.UTC)
+    return datetime.now(UTC)
 
 
 # ── cleanup_temp_frames_task ───────────────────────────────────────────────────

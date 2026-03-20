@@ -1,5 +1,5 @@
 import hashlib
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from jose import jwt
@@ -25,7 +25,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def _now_utc() -> datetime:
-    return datetime.now(datetime.UTC)
+    return datetime.now(UTC)
 
 
 def create_access_token(subject: str, extra: dict[str, Any] | None = None) -> str:

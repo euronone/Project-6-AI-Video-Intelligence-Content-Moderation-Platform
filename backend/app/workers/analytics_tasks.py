@@ -229,7 +229,7 @@ def flush_analytics_events_task(self) -> dict[str, Any]:
                         confidence=data.get("confidence"),
                         extra=json.dumps(data.get("extra")) if data.get("extra") else None,
                         event_date=data.get(
-                            "event_date", datetime.now(datetime.UTC).date().isoformat()
+                            "event_date", datetime.now(UTC).date().isoformat()
                         ),
                     )
                 )

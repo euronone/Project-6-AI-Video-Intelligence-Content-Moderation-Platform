@@ -18,7 +18,7 @@ from __future__ import annotations
 import contextlib
 import json
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import redis.asyncio as aioredis
@@ -151,7 +151,7 @@ class StreamService:
             raise NotFoundError("LiveStream", str(stream_id))
 
         stream.status = StreamStatus.STOPPED
-        stream.stopped_at = datetime.now(datetime.UTC).isoformat()
+        stream.stopped_at = datetime.now(UTC).isoformat()
 
         await self.broadcast_event(stream_id, "stream.stopped", {"stream_id": str(stream_id)})
         logger.info("stream_stopped", stream_id=str(stream_id))

@@ -24,7 +24,7 @@ import os
 import subprocess
 import tempfile
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import boto3
@@ -67,7 +67,7 @@ def _set_video_status(video_id: str, status: VideoStatus, error: str | None = No
             video.status = status
             if error:
                 video.error_message = error
-            video.updated_at = datetime.now(datetime.UTC)
+            video.updated_at = datetime.now(UTC)
 
 
 # ── W-02-A: Frame extraction ───────────────────────────────────────────────────
@@ -216,7 +216,7 @@ def generate_thumbnail_task(self, video_id: str, s3_key: str) -> str | None:
             video = db.get(Video, uuid.UUID(video_id))
             if video:
                 video.thumbnail_s3_key = thumb_key
-                video.updated_at = datetime.now(datetime.UTC)
+                video.updated_at = datetime.now(UTC)
 
         logger.info("generate_thumbnail_task_done", video_id=video_id, thumb_key=thumb_key)
         return thumb_key
@@ -293,7 +293,7 @@ def run_analysis_pipeline_task(
             existing.violations = [v.model_dump() for v in report.violations]
             existing.summary = report.content_summary
             existing.ai_model = settings.OPENAI_MODEL
-            existing.updated_at = datetime.now(datetime.UTC)
+            existing.updated_at = datetime.now(UTC)
         else:
             db.add(
                 ModerationResult(
@@ -310,7 +310,7 @@ def run_analysis_pipeline_task(
         video = db.get(Video, uuid.UUID(video_id))
         if video:
             video.status = VideoStatus.READY
-            video.updated_at = datetime.now(datetime.UTC)
+            video.updated_at = datetime.now(UTC)
 
     logger.info(
         "run_analysis_pipeline_task_done",

@@ -5,7 +5,7 @@ CRUD, upload URL generation, and status polling for videos.
 
 import json
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated
 
 import structlog
@@ -247,7 +247,7 @@ async def delete_video(
     if not video:
         raise NotFoundError("Video", str(video_id))
 
-    video.deleted_at = datetime.now(datetime.UTC).isoformat()
+    video.deleted_at = datetime.now(UTC).isoformat()
     video.status = VideoStatus.DELETED
     # Stub: enqueue S3 cleanup — cleanup_tasks.delete_video_artifacts.delay(str(video_id))
     logger.info("video_soft_deleted", video_id=str(video_id))

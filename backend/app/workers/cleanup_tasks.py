@@ -29,7 +29,7 @@ Schedule example (Celery Beat):
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import boto3
@@ -77,7 +77,7 @@ def cleanup_temp_frames_task(
     """
     logger.info("cleanup_temp_frames_start", ttl_hours=ttl_hours)
 
-    cutoff = datetime.now(datetime.UTC) - timedelta(hours=ttl_hours)
+    cutoff = datetime.now(UTC) - timedelta(hours=ttl_hours)
     deleted = errors = 0
 
     try:
@@ -144,7 +144,7 @@ def purge_stale_jobs_task(
     """
     logger.info("purge_stale_jobs_start", stale_hours=stale_hours)
 
-    cutoff = datetime.now(datetime.UTC) - timedelta(hours=stale_hours)
+    cutoff = datetime.now(UTC) - timedelta(hours=stale_hours)
     marked_failed = 0
 
     try:
@@ -162,7 +162,7 @@ def purge_stale_jobs_task(
                 video.error_message = (
                     f"Processing timed out after {stale_hours}h — marked failed by cleanup task."
                 )
-                video.updated_at = datetime.now(datetime.UTC)
+                video.updated_at = datetime.now(UTC)
                 marked_failed += 1
 
     except Exception as exc:
@@ -197,7 +197,7 @@ def prune_old_analytics_events_task(
     """
     logger.info("prune_old_analytics_events_start", retention_days=retention_days)
 
-    cutoff_date = (datetime.now(datetime.UTC) - timedelta(days=retention_days)).date().isoformat()
+    cutoff_date = (datetime.now(UTC) - timedelta(days=retention_days)).date().isoformat()
     deleted = 0
 
     try:
@@ -246,7 +246,7 @@ def cleanup_orphaned_s3_objects_task(
     """
     logger.info("cleanup_orphaned_s3_start", prefix=prefix, min_age_hours=min_age_hours)
 
-    cutoff = datetime.now(datetime.UTC) - timedelta(hours=min_age_hours)
+    cutoff = datetime.now(UTC) - timedelta(hours=min_age_hours)
     scanned = deleted = errors = 0
 
     try:
