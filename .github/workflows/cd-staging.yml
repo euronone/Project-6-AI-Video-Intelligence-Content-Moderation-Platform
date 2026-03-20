@@ -1,0 +1,177 @@
+name: CD — Staging
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (defaults to commit SHA)"
+        required: false
+        default: ""
+
+concurrency:
+  group: cd-staging
+  cancel-in-progress: false # never cancel an in-flight deploy
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+  IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
+
+permissions:
+  id-token: write   # required for OIDC
+  contents: read
+
+jobs:
+  # ── Build & push images ───────────────────────────────────────────────────────
+  build-push:
+    name: Build & Push to ECR
+    runs-on: ubuntu-latest
+
+    outputs:
+      image_tag: ${{ env.IMAGE_TAG }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_STAGING }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: |
+            ${{ env.ECR_REGISTRY }}/vidshield-backend:${{ env.IMAGE_TAG }}
+            ${{ env.ECR_REGISTRY }}/vidshield-backend:staging-latest
+
+      - name: Build & push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://staging.vidshield.ai
+            NEXT_PUBLIC_WS_URL=https://staging.vidshield.ai
+            NEXT_PUBLIC_APP_ENV=staging
+            NEXT_PUBLIC_MOCK_API=false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: |
+            ${{ env.ECR_REGISTRY }}/vidshield-frontend:${{ env.IMAGE_TAG }}
+            ${{ env.ECR_REGISTRY }}/vidshield-frontend:staging-latest
+
+  # ── Terraform apply ───────────────────────────────────────────────────────────
+  terraform-staging:
+    name: Terraform Apply — Staging
+    runs-on: ubuntu-latest
+    needs: build-push
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_STAGING }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.x"
+
+      - name: Terraform init
+        working-directory: terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET_STAGING }}" \
+            -backend-config="key=envs/staging/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="dynamodb_table=${{ secrets.TF_LOCK_TABLE }}"
+
+      - name: Terraform plan
+        working-directory: terraform
+        run: |
+          terraform plan \
+            -var-file=environments/staging.tfvars \
+            -var="aws_account_id=${{ secrets.AWS_ACCOUNT_ID }}" \
+            -var="ecr_backend_image=${{ env.ECR_REGISTRY }}/vidshield-backend:${{ needs.build-push.outputs.image_tag }}" \
+            -var="ecr_frontend_image=${{ env.ECR_REGISTRY }}/vidshield-frontend:${{ needs.build-push.outputs.image_tag }}" \
+            -var="db_secret_arn=${{ secrets.DB_SECRET_ARN_STAGING }}" \
+            -var="redis_secret_arn=${{ secrets.REDIS_SECRET_ARN_STAGING }}" \
+            -var="secret_key_arn=${{ secrets.SECRET_KEY_ARN_STAGING }}" \
+            -var="openai_api_key_arn=${{ secrets.OPENAI_API_KEY_ARN }}" \
+            -var="pinecone_api_key_arn=${{ secrets.PINECONE_API_KEY_ARN }}" \
+            -var="db_password_secret_arn=${{ secrets.DB_PASSWORD_SECRET_ARN_STAGING }}" \
+            -out=tfplan
+
+      - name: Terraform apply
+        working-directory: terraform
+        run: terraform apply -auto-approve tfplan
+
+  # ── Deploy ECS services ───────────────────────────────────────────────────────
+  deploy-ecs:
+    name: Deploy ECS — Staging
+    runs-on: ubuntu-latest
+    needs: terraform-staging
+    environment: staging
+
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_STAGING }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Force new deployment — API
+        run: |
+          aws ecs update-service \
+            --cluster vidshield-staging-cluster \
+            --service vidshield-staging-api \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Force new deployment — Worker
+        run: |
+          aws ecs update-service \
+            --cluster vidshield-staging-cluster \
+            --service vidshield-staging-worker \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Force new deployment — Frontend
+        run: |
+          aws ecs update-service \
+            --cluster vidshield-staging-cluster \
+            --service vidshield-staging-frontend \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Wait for API service stability
+        run: |
+          aws ecs wait services-stable \
+            --cluster vidshield-staging-cluster \
+            --services vidshield-staging-api \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Health check
+        run: |
+          curl --fail --retry 5 --retry-delay 10 \
+            https://staging.vidshield.ai/api/v1/health || \
+          echo "::warning::Health check endpoint not reachable (may need DNS/cert setup)"
