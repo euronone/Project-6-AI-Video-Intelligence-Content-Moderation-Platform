@@ -14,7 +14,6 @@ import {
   useUpdatePolicy,
   useDeletePolicy,
 } from '@/hooks/useModeration';
-import { VIOLATION_CATEGORY_LABELS } from '@/lib/constants';
 import type { Policy } from '@/types/moderation';
 
 export default function PoliciesPage() {
@@ -72,7 +71,7 @@ export default function PoliciesPage() {
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-center">
           <p className="text-sm text-destructive">Failed to load policies.</p>
         </div>
-      ) : data?.items.length === 0 ? (
+      ) : data?.items?.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
           <p className="text-muted-foreground">No policies yet.</p>
           <Button className="mt-4" onClick={openCreate}>
@@ -81,7 +80,7 @@ export default function PoliciesPage() {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {data?.items.map((policy) => (
+          {data?.items?.map((policy) => (
             <Card key={policy.id}>
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between gap-2">
@@ -99,19 +98,10 @@ export default function PoliciesPage() {
                 )}
               </CardHeader>
               <CardContent className="space-y-3">
-                {/* Categories */}
-                <div className="flex flex-wrap gap-1">
-                  {policy.categories.map((cat) => (
-                    <Badge key={cat} variant="outline" className="text-xs">
-                      {VIOLATION_CATEGORY_LABELS[cat]}
-                    </Badge>
-                  ))}
-                </div>
-
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <span>{policy.rules.length} rule{policy.rules.length !== 1 ? 's' : ''}</span>
+                  <span>{(policy.rules ?? []).length} rule{(policy.rules ?? []).length !== 1 ? 's' : ''}</span>
                   <span>·</span>
-                  <span>{policy.actions.length} action{policy.actions.length !== 1 ? 's' : ''}</span>
+                  <span>Default: <strong>{policy.default_action}</strong></span>
                 </div>
 
                 <div className="flex justify-end gap-1">
