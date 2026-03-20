@@ -4,6 +4,8 @@
 
 VidShield AI is deployed on **AWS** using **Docker** for packaging and **Terraform** (and optionally **AWS CDK**) for infrastructure. CI/CD is handled by **GitHub Actions**. No application code is executed in this doc; only configuration and topology are described.
 
+> **For step-by-step implementation:** see [AWS-deployment-guide.md](../AWS-deployment-guide.md) for credentials, Terraform, Docker, ECS deployment, CI/CD setup, and verification.
+
 ## 2. Environments
 
 - **dev** — Development; optional shared or local DB/Redis/S3; used for feature and integration testing.
@@ -77,6 +79,7 @@ Images stored in **ECR**; tagged by git commit or version. Pull by ECS from same
 
 ## 9. References
 
+- **AWS-deployment-guide.md** — Step-by-step AWS deployment guide: credentials to gather, Terraform, Docker, ECS, CI/CD, and post-deploy verification.
 - **CLAUDE.md** — Key commands (`make deploy ENV=staging`, Terraform, Docker).
 - **docs/ARCHITECTURE.md** — Services and dependencies.
 - **docs/API_SPEC.md** — Health and public endpoints.
