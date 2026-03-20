@@ -197,12 +197,8 @@ async def escalate_node(state: ModerationWorkflowState) -> dict[str, Any]:
 
 
 async def finalize_node(state: ModerationWorkflowState) -> dict[str, Any]:
-    """Accept the chain decision as-is."""
+    """Accept the chain decision as-is (only reached on the high-confidence path)."""
     chain_out = state.get("chain_output") or {}
-
-    # If escalate_node already ran, don't overwrite its output
-    if state.get("escalated") and state.get("final_decision"):
-        return {}
 
     return {
         "final_decision": chain_out.get("decision", ModerationDecision.NEEDS_REVIEW.value),
@@ -233,7 +229,7 @@ def _build_workflow() -> Any:
         _route_after_confidence,
         {"escalate": "escalate", "finalize": "finalize"},
     )
-    graph.add_edge("escalate", "finalize")
+    graph.add_edge("escalate", END)
     graph.add_edge("finalize", END)
 
     return graph.compile()

@@ -13,7 +13,7 @@ Public entry points:
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import structlog

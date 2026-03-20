@@ -285,7 +285,7 @@ def dispatch_webhooks_task(
             logger.warning(
                 "dispatch_webhooks_delivery_failed",
                 url=endpoint.url,
-                event=event,
+                webhook_event=event,
                 error=str(exc),
             )
             with sync_session() as db:
