@@ -31,9 +31,9 @@ class TestMigrationStructure:
         import app.models.webhook  # noqa: F401
 
         actual_tables = set(Base.metadata.tables.keys())
-        assert expected_tables.issubset(actual_tables), (
-            f"Missing tables: {expected_tables - actual_tables}"
-        )
+        assert expected_tables.issubset(
+            actual_tables
+        ), f"Missing tables: {expected_tables - actual_tables}"
 
     def _load_migration(self):
         import importlib.util
