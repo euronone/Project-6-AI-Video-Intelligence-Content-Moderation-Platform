@@ -127,15 +127,9 @@ resource "aws_cloudfront_distribution" "this" {
   }
 
   viewer_certificate {
-    dynamic "acm_certificate" {
-      for_each = var.certificate_arn != "" ? [1] : []
-      content {
-        acm_certificate_arn      = var.certificate_arn
-        ssl_support_method       = "sni-only"
-        minimum_protocol_version = "TLSv1.2_2021"
-      }
-    }
-
+    acm_certificate_arn            = var.certificate_arn != "" ? var.certificate_arn : null
+    ssl_support_method             = var.certificate_arn != "" ? "sni-only" : null
+    minimum_protocol_version       = var.certificate_arn != "" ? "TLSv1.2_2021" : null
     cloudfront_default_certificate = var.certificate_arn == ""
   }
 

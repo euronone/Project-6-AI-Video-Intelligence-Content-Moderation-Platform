@@ -228,9 +228,7 @@ def flush_analytics_events_task(self) -> dict[str, Any]:
                         category=data.get("category"),
                         confidence=data.get("confidence"),
                         extra=json.dumps(data.get("extra")) if data.get("extra") else None,
-                        event_date=data.get(
-                            "event_date", datetime.now(UTC).date().isoformat()
-                        ),
+                        event_date=data.get("event_date", datetime.now(UTC).date().isoformat()),
                     )
                 )
             except Exception as parse_exc:

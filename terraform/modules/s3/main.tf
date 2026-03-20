@@ -53,6 +53,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "videos" {
   rule {
     id     = "transition-to-ia"
     status = "Enabled"
+    filter {
+      prefix = ""
+    }
     transition {
       days          = var.video_lifecycle_transition_days
       storage_class = "STANDARD_IA"
@@ -128,6 +131,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
   rule {
     id     = "expire-artifacts"
     status = "Enabled"
+    filter {
+      prefix = ""
+    }
     expiration {
       days = var.artifact_expiration_days
     }
