@@ -2,9 +2,9 @@
 # Cost-optimised single-AZ dev environment.
 # terraform apply -var-file=environments/dev.tfvars
 
-project     = "vidshield"
-environment = "dev"
-aws_region  = "us-east-1"
+project        = "vidshield"
+environment    = "dev"
+aws_region     = "us-east-1"
 aws_account_id = "602498848126"
 
 availability_zones   = ["us-east-1a", "us-east-1b"]
@@ -51,12 +51,12 @@ api_5xx_threshold = 50 # less sensitive in dev
 alarm_email       = "" # set to your email to receive dev alerts
 
 # Secrets — AWS Secrets Manager ARNs
-db_password_secret_arn  = "arn:aws:secretsmanager:us-east-1:602498848126:secret:vidshield/dev/db-password-TobRn9"
-db_secret_arn           = "arn:aws:secretsmanager:us-east-1:602498848126:secret:vidshield/dev/database-url-R0rmq3"
-redis_secret_arn        = "arn:aws:secretsmanager:us-east-1:602498848126:secret:vidshield/dev/redis-url-vYJD7N"
-secret_key_arn          = "arn:aws:secretsmanager:us-east-1:602498848126:secret:vidshield/dev/secret-key-2jFcxh"
-openai_api_key_arn      = "arn:aws:secretsmanager:us-east-1:602498848126:secret:vidshield/dev/openai-api-key-dY4Dtf"
-pinecone_api_key_arn    = "arn:aws:secretsmanager:us-east-1:602498848126:secret:vidshield/dev/pinecone-api-key-PYo4Tg"
+db_password_secret_arn = "arn:aws:secretsmanager:us-east-1:602498848126:secret:vidshield/dev/db-password-TobRn9"
+db_secret_arn          = "arn:aws:secretsmanager:us-east-1:602498848126:secret:vidshield/dev/database-url-R0rmq3"
+redis_secret_arn       = "arn:aws:secretsmanager:us-east-1:602498848126:secret:vidshield/dev/redis-url-vYJD7N"
+secret_key_arn         = "arn:aws:secretsmanager:us-east-1:602498848126:secret:vidshield/dev/secret-key-2jFcxh"
+openai_api_key_arn     = "arn:aws:secretsmanager:us-east-1:602498848126:secret:vidshield/dev/openai-api-key-dY4Dtf"
+pinecone_api_key_arn   = "arn:aws:secretsmanager:us-east-1:602498848126:secret:vidshield/dev/pinecone-api-key-PYo4Tg"
 
 # ECR images
 ecr_backend_image  = "602498848126.dkr.ecr.us-east-1.amazonaws.com/vidshield-backend:latest"
