@@ -2,6 +2,8 @@
 export type VideoStatus =
   | 'pending'
   | 'processing'
+  | 'completed'
+  | 'flagged'
   | 'ready'
   | 'failed'
   | 'deleted';
@@ -11,10 +13,12 @@ export type VideoSource = 'upload' | 'api' | 'live';
 // Matches backend VideoResponse schema
 export interface Video {
   id: string;
-  title: string;
+  title?: string;
+  filename?: string;
   description?: string;
   source: VideoSource;
   status: VideoStatus;
+  duration?: number;
   duration_seconds?: number;
   file_size_bytes?: number;
   content_type?: string;
@@ -23,7 +27,7 @@ export interface Video {
   thumbnail_url?: string;
   playback_url?: string;
   moderation_status?: string;
-  owner_id: string;
+  owner_id?: string;
   tenant_id?: string;
   created_at: string;
   updated_at: string;

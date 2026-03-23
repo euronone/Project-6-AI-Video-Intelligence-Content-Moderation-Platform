@@ -65,6 +65,8 @@ export const MODERATION_STATUS_LABELS: Record<string, string> = {
 export const VIDEO_STATUS_LABELS: Record<string, string> = {
   pending: 'Pending',
   processing: 'Processing',
+  completed: 'Completed',
+  flagged: 'Flagged',
   ready: 'Ready',
   failed: 'Failed',
   deleted: 'Deleted',
