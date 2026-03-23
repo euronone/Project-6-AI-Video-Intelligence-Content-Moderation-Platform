@@ -20,7 +20,9 @@
       "Bash(python -m pytest tests/test_services --tb=no -q)",
       "Bash(python -m pytest tests/test_models --tb=no -q)",
       "Bash(python -m pytest tests/test_ai --tb=no -q)",
-      "Bash(python -m pytest tests/test_workers --tb=no -q)"
+      "Bash(python -m pytest tests/test_workers --tb=no -q)",
+      "Bash(docker push:*)",
+      "Bash(aws ecs:*)"
     ]
   }
 }

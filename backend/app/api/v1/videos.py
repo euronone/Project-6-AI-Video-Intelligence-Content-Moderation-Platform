@@ -17,7 +17,6 @@ from app.api.deps import CurrentUser, OperatorUser
 from app.config import settings
 from app.core.exceptions import ForbiddenError, NotFoundError
 from app.dependencies import get_db
-from app.services.storage_service import StorageService, get_storage_service
 from app.models.video import Video, VideoStatus
 from app.schemas.video import (
     PaginatedVideos,
@@ -28,6 +27,7 @@ from app.schemas.video import (
     VideoStatusResponse,
     VideoUpdate,
 )
+from app.services.storage_service import StorageService, get_storage_service
 
 router = APIRouter(prefix="/videos", tags=["videos"])
 logger = structlog.get_logger(__name__)

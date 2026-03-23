@@ -41,4 +41,11 @@ save all the prompts I have used here today in to the @prompts/prompt-history.md
 [Prompt:]
 VidShield AI — AWS Deployment Guide. Implement the plan as specified, it is attached for your reference. Do NOT edit the plan file itself. To-do's from the plan have already been created. Do not create them again. Mark them as in_progress as you work, starting with the first one. Don't stop until you have completed all the to-dos.
 ---
+### 2026-03-23 13:58 UTC
+[Timestamp: 2026-03-23T13:58:57Z]
+[Prompt:]
+(.venv) E:\EURON_AI_PRODUCT_ENG\Project-6-AI-Video-Intelligence-Content-Moderation-Platform>export AWS_ACCESS_KEY_ID=[REDACTED]
+'export' is not recognized as an internal or external command,
+operable program or batch file. -- I tried to run the command through both CMD and PowerShell
+---
 
