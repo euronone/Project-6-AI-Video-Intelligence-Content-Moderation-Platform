@@ -30,11 +30,11 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       login: async (email, password) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await apiClient.post<{
-            data: { access_token: string; refresh_token: string; user: User };
+          const { access_token, refresh_token, user } = await apiClient.post<{
+            access_token: string;
+            refresh_token: string;
+            user: User;
           }>('/auth/login', { email, password });
-
-          const { access_token, refresh_token, user } = response.data;
           apiClient.setTokens(access_token, refresh_token);
           connectSocket(access_token);
 

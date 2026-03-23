@@ -55,7 +55,7 @@ export default function VideoDetailPage() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold truncate">{video.title ?? video.filename}</h1>
+          <h1 className="text-2xl font-bold truncate">{video.title}</h1>
           <Badge variant="secondary">{VIDEO_STATUS_LABELS[video.status]}</Badge>
         </div>
       </div>
@@ -91,10 +91,10 @@ export default function VideoDetailPage() {
                 {formatDistanceToNow(new Date(video.created_at), { addSuffix: true })}
               </p>
             </div>
-            {video.job_id && (
+            {video.s3_key && (
               <div>
-                <p className="text-muted-foreground">Job ID</p>
-                <p className="font-mono text-xs truncate">{video.job_id}</p>
+                <p className="text-muted-foreground">Storage key</p>
+                <p className="font-mono text-xs truncate">{video.s3_key}</p>
               </div>
             )}
           </div>

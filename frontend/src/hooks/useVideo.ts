@@ -5,13 +5,12 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api';
 import type {
+  Video,
   VideoListResponse,
-  VideoResponse,
   VideoListParams,
   UploadUrlRequest,
   UploadUrlResponse,
   RegisterUploadRequest,
-  RegisterUploadResponse,
 } from '@/types/video';
 import { useVideoStore } from '@/stores/videoStore';
 
@@ -24,17 +23,14 @@ export const videoKeys = {
 export function useVideoList(params: VideoListParams = {}) {
   return useQuery({
     queryKey: videoKeys.list(params),
-    queryFn: () =>
-      apiClient.get<VideoListResponse>('/videos', { params }),
-    select: (res) => res.data,
+    queryFn: () => apiClient.get<VideoListResponse>('/videos', { params }),
   });
 }
 
 export function useVideo(id: string) {
   return useQuery({
     queryKey: videoKeys.detail(id),
-    queryFn: () => apiClient.get<VideoResponse>(`/videos/${id}`),
-    select: (res) => res.data,
+    queryFn: () => apiClient.get<Video>(`/videos/${id}`),
     enabled: !!id,
   });
 }
@@ -60,41 +56,44 @@ export function useUploadVideo() {
 
   return useMutation({
     mutationFn: async ({ file }: { file: File }) => {
-      // 1. Get presigned upload URL
+      // 1. Get presigned S3 PUT URL from backend
       const urlReq: UploadUrlRequest = {
         filename: file.name,
         content_type: file.type,
-        size: file.size,
+        file_size_bytes: file.size,
       };
       const urlRes = await apiClient.post<UploadUrlResponse>('/videos/upload-url', urlReq);
-      const { upload_url, video_id } = urlRes.data;
+      // Backend returns the object directly — no .data wrapper
+      const { upload_url, s3_key } = urlRes;
 
-      // Track upload
-      addUpload({ videoId: video_id, filename: file.name, progress: 0, status: 'uploading' });
+      // Use a client-side temp ID for progress tracking (no video_id at this stage)
+      const tempId = `${file.name}-${Date.now()}`;
+      addUpload({ videoId: tempId, filename: file.name, progress: 0, status: 'uploading' });
 
-      // 2. Upload file directly to S3 presigned URL
+      // 2. PUT file directly to S3 using the presigned URL
+      // Must send the same Content-Type that was used to sign the URL
       await axios.put(upload_url, file, {
         headers: { 'Content-Type': file.type },
         onUploadProgress: (e) => {
           const progress = e.total ? Math.round((e.loaded / e.total) * 100) : 0;
-          updateUpload(video_id, { progress });
+          updateUpload(tempId, { progress });
         },
       });
 
-      updateUpload(video_id, { status: 'registering', progress: 100 });
+      updateUpload(tempId, { status: 'registering', progress: 100 });
 
-      // 3. Register upload with backend
-      const s3Key = new URL(upload_url).pathname.slice(1);
+      // 3. Register the video in the backend database
       const regReq: RegisterUploadRequest = {
+        title: file.name,   // use filename as initial title; user can edit later
         source: 'upload',
-        storage_key: s3Key,
-        filename: file.name,
+        s3_key,             // use s3_key returned by upload-url endpoint
         content_type: file.type,
+        file_size_bytes: file.size,
       };
-      const regRes = await apiClient.post<RegisterUploadResponse>('/videos', regReq);
+      const video = await apiClient.post<Video>('/videos', regReq);
 
-      updateUpload(video_id, { status: 'done' });
-      return regRes.data;
+      updateUpload(tempId, { status: 'done' });
+      return video;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: videoKeys.all });

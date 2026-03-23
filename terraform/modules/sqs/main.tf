@@ -62,9 +62,7 @@ resource "aws_sqs_queue" "moderation" {
 
 # ── Queue Policy — allow ECS task role to send/receive/delete ─────────────────
 
-data "aws_iam_policy_document" "queue_policy" {
-  count = var.ecs_task_role_arn != "" ? 1 : 0
-
+data "aws_iam_policy_document" "video_processing_policy" {
   statement {
     sid    = "AllowECSTaskAccess"
     effect = "Allow"
@@ -82,21 +80,38 @@ data "aws_iam_policy_document" "queue_policy" {
       "sqs:ChangeMessageVisibility",
     ]
 
-    resources = [
-      aws_sqs_queue.video_processing.arn,
-      aws_sqs_queue.moderation.arn,
+    resources = [aws_sqs_queue.video_processing.arn]
+  }
+}
+
+data "aws_iam_policy_document" "moderation_policy" {
+  statement {
+    sid    = "AllowECSTaskAccess"
+    effect = "Allow"
+
+    principals {
+      type        = "AWS"
+      identifiers = [var.ecs_task_role_arn]
+    }
+
+    actions = [
+      "sqs:SendMessage",
+      "sqs:ReceiveMessage",
+      "sqs:DeleteMessage",
+      "sqs:GetQueueAttributes",
+      "sqs:ChangeMessageVisibility",
     ]
+
+    resources = [aws_sqs_queue.moderation.arn]
   }
 }
 
 resource "aws_sqs_queue_policy" "video_processing" {
-  count     = var.ecs_task_role_arn != "" ? 1 : 0
   queue_url = aws_sqs_queue.video_processing.url
-  policy    = data.aws_iam_policy_document.queue_policy[0].json
+  policy    = data.aws_iam_policy_document.video_processing_policy.json
 }
 
 resource "aws_sqs_queue_policy" "moderation" {
-  count     = var.ecs_task_role_arn != "" ? 1 : 0
   queue_url = aws_sqs_queue.moderation.url
-  policy    = data.aws_iam_policy_document.queue_policy[0].json
+  policy    = data.aws_iam_policy_document.moderation_policy.json
 }

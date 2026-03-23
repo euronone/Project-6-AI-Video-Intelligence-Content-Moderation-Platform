@@ -5,7 +5,7 @@
 project     = "vidshield"
 environment = "dev"
 aws_region  = "us-east-1"
-# aws_account_id = "<your-account-id>"   # set via TF_VAR_aws_account_id env var
+aws_account_id = "602498848126"
 
 availability_zones   = ["us-east-1a", "us-east-1b"]
 vpc_cidr             = "10.0.0.0/16"
@@ -26,7 +26,7 @@ frontend_desired_count = 1
 
 # RDS — smallest instance, single-AZ, no deletion protection
 rds_instance_class        = "db.t4g.micro"
-rds_allocated_storage     = 10
+rds_allocated_storage     = 20
 rds_max_allocated_storage = 30
 rds_multi_az              = false
 rds_backup_retention_days = 1
@@ -44,23 +44,23 @@ s3_force_destroy = true
 cloudfront_price_class = "PriceClass_100"
 certificate_arn        = "" # no HTTPS in dev; use HTTP via ALB
 domain_aliases         = []
-cors_origins           = "[\"*\"]"
+cors_origins           = "[\"https://d9whrgf1g87iv.cloudfront.net\",\"http://localhost:3000\"]"
 
 # Monitoring
 api_5xx_threshold = 50 # less sensitive in dev
 alarm_email       = "" # set to your email to receive dev alerts
 
-# Secrets — set via TF_VAR_* environment variables or AWS Secrets Manager ARNs
-# db_password_secret_arn  = "arn:aws:secretsmanager:us-east-1:<account>:secret:vidshield/dev/db-password-xxxx"
-# db_secret_arn           = "arn:aws:secretsmanager:us-east-1:<account>:secret:vidshield/dev/database-url-xxxx"
-# redis_secret_arn        = "arn:aws:secretsmanager:us-east-1:<account>:secret:vidshield/dev/redis-url-xxxx"
-# secret_key_arn          = "arn:aws:secretsmanager:us-east-1:<account>:secret:vidshield/dev/secret-key-xxxx"
-# openai_api_key_arn      = "arn:aws:secretsmanager:us-east-1:<account>:secret:vidshield/dev/openai-api-key-xxxx"
-# pinecone_api_key_arn    = "arn:aws:secretsmanager:us-east-1:<account>:secret:vidshield/dev/pinecone-api-key-xxxx"
+# Secrets — AWS Secrets Manager ARNs
+db_password_secret_arn  = "arn:aws:secretsmanager:us-east-1:602498848126:secret:vidshield/dev/db-password-TobRn9"
+db_secret_arn           = "arn:aws:secretsmanager:us-east-1:602498848126:secret:vidshield/dev/database-url-R0rmq3"
+redis_secret_arn        = "arn:aws:secretsmanager:us-east-1:602498848126:secret:vidshield/dev/redis-url-vYJD7N"
+secret_key_arn          = "arn:aws:secretsmanager:us-east-1:602498848126:secret:vidshield/dev/secret-key-2jFcxh"
+openai_api_key_arn      = "arn:aws:secretsmanager:us-east-1:602498848126:secret:vidshield/dev/openai-api-key-dY4Dtf"
+pinecone_api_key_arn    = "arn:aws:secretsmanager:us-east-1:602498848126:secret:vidshield/dev/pinecone-api-key-PYo4Tg"
 
-# ECR images — set via TF_VAR_* or CI/CD
-# ecr_backend_image  = "<account>.dkr.ecr.us-east-1.amazonaws.com/vidshield-backend:latest"
-# ecr_frontend_image = "<account>.dkr.ecr.us-east-1.amazonaws.com/vidshield-frontend:latest"
+# ECR images
+ecr_backend_image  = "602498848126.dkr.ecr.us-east-1.amazonaws.com/vidshield-backend:latest"
+ecr_frontend_image = "602498848126.dkr.ecr.us-east-1.amazonaws.com/vidshield-frontend:latest"
 
 tags = {
   CostCenter = "engineering"

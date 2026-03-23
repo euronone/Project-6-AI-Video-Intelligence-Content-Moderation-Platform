@@ -98,28 +98,28 @@ export class ApiClient {
   }
 
   async get<T>(path: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.instance.get<T>(path, config);
-    return response.data;
+    const response = await this.instance.get<{ data: T }>(path, config);
+    return response.data.data;
   }
 
   async post<T>(path: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.instance.post<T>(path, data, config);
-    return response.data;
+    const response = await this.instance.post<{ data: T }>(path, data, config);
+    return response.data.data;
   }
 
   async patch<T>(path: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.instance.patch<T>(path, data, config);
-    return response.data;
+    const response = await this.instance.patch<{ data: T }>(path, data, config);
+    return response.data.data;
   }
 
   async put<T>(path: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.instance.put<T>(path, data, config);
-    return response.data;
+    const response = await this.instance.put<{ data: T }>(path, data, config);
+    return response.data.data;
   }
 
-  async delete<T>(path: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.instance.delete<T>(path, config);
-    return response.data;
+  async delete<T = void>(path: string, config?: AxiosRequestConfig): Promise<T> {
+    const response = await this.instance.delete<{ data: T } | null>(path, config);
+    return ((response.data as { data: T } | null)?.data) as T;
   }
 }
 

@@ -16,7 +16,7 @@ FROM python:3.12-slim AS runtime
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 ffmpeg && rm -rf /var/lib/apt/lists/*
+    libpq5 ffmpeg curl && rm -rf /var/lib/apt/lists/*
 
 # Copy installed packages from deps stage
 COPY --from=deps /usr/local/lib/python3.12 /usr/local/lib/python3.12

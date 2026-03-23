@@ -28,6 +28,11 @@ output "sg_ecs_api_id" {
   value       = aws_security_group.ecs_api.id
 }
 
+output "sg_ecs_frontend_id" {
+  description = "Security group ID for ECS Frontend tasks."
+  value       = aws_security_group.ecs_frontend.id
+}
+
 output "sg_ecs_worker_id" {
   description = "Security group ID for ECS Celery worker tasks."
   value       = aws_security_group.ecs_worker.id

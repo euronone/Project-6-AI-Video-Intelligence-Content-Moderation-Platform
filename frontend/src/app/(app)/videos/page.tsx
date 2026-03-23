@@ -63,9 +63,9 @@ export default function VideosPage() {
             <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="processing">Processing</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="flagged">Flagged</SelectItem>
+            <SelectItem value="ready">Ready</SelectItem>
             <SelectItem value="failed">Failed</SelectItem>
+            <SelectItem value="deleted">Deleted</SelectItem>
           </SelectContent>
         </Select>
       </div>

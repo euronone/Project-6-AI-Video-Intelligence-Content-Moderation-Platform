@@ -18,9 +18,9 @@ import type { Video, VideoStatus } from '@/types/video';
 const statusVariant: Record<VideoStatus, 'default' | 'secondary' | 'destructive' | 'warning' | 'success' | 'info'> = {
   pending: 'secondary',
   processing: 'info',
-  completed: 'success',
+  ready: 'success',
   failed: 'destructive',
-  flagged: 'warning',
+  deleted: 'secondary',
 };
 
 interface VideoCardProps {
@@ -36,7 +36,7 @@ export function VideoCard({ video, onDelete }: VideoCardProps) {
         {video.thumbnail_url ? (
           <Image
             src={video.thumbnail_url}
-            alt={video.title ?? video.filename}
+            alt={video.title}
             fill
             className="object-cover"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -46,9 +46,9 @@ export function VideoCard({ video, onDelete }: VideoCardProps) {
             <Film className="h-10 w-10 text-muted-foreground/40" />
           </div>
         )}
-        {video.duration !== undefined && (
+        {video.duration_seconds !== undefined && (
           <span className="absolute bottom-2 right-2 rounded bg-black/70 px-1.5 py-0.5 text-xs text-white">
-            {formatDuration(video.duration)}
+            {formatDuration(video.duration_seconds)}
           </span>
         )}
       </Link>
@@ -58,7 +58,7 @@ export function VideoCard({ video, onDelete }: VideoCardProps) {
           <div className="min-w-0 flex-1">
             <Link href={ROUTES.videoDetail(video.id)}>
               <p className="truncate font-medium leading-tight hover:underline">
-                {video.title ?? video.filename}
+                {video.title}
               </p>
             </Link>
             <p className="mt-1 text-xs text-muted-foreground">
