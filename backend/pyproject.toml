@@ -55,6 +55,9 @@ dependencies = [
     # Video processing
     "opencv-python-headless==4.10.0.84",
 
+    # WebSockets / Socket.IO
+    "python-socketio[asyncio]==5.11.4",
+
     # Utilities
     "python-dateutil==2.9.0",
     "orjson==3.10.7",

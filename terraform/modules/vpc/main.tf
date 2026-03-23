@@ -190,6 +190,30 @@ resource "aws_security_group" "ecs_api" {
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-sg-ecs-api" })
 }
 
+resource "aws_security_group" "ecs_frontend" {
+  name        = "${local.name_prefix}-sg-ecs-frontend"
+  description = "ECS Frontend tasks: allow inbound port 3000 from ALB only; outbound unrestricted."
+  vpc_id      = aws_vpc.this.id
+
+  ingress {
+    description     = "From ALB"
+    from_port       = 3000
+    to_port         = 3000
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+
+  egress {
+    description = "All outbound"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(local.common_tags, { Name = "${local.name_prefix}-sg-ecs-frontend" })
+}
+
 resource "aws_security_group" "ecs_worker" {
   name        = "${local.name_prefix}-sg-ecs-worker"
   description = "Celery workers: no inbound; unrestricted outbound."

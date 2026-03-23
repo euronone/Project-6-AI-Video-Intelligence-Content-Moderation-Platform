@@ -264,7 +264,7 @@ resource "aws_lb_listener_rule" "api" {
 
   condition {
     path_pattern {
-      values = ["/api/*"]
+      values = ["/api/*", "/health", "/docs", "/redoc", "/openapi.json"]
     }
   }
 }
@@ -292,12 +292,13 @@ resource "aws_ecs_task_definition" "api" {
 
       command = [
         "sh", "-c",
-        "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"
+        "alembic upgrade head && uvicorn app.main:asgi_app --host 0.0.0.0 --port 8000 --workers 2"
       ]
 
       environment = [
         { name = "APP_ENV", value = var.environment },
         { name = "AWS_REGION", value = var.aws_region },
+        { name = "S3_BUCKET_NAME", value = var.s3_videos_bucket },
         { name = "S3_BUCKET_VIDEOS", value = var.s3_videos_bucket },
         { name = "S3_BUCKET_THUMBNAILS", value = var.s3_thumbnails_bucket },
         { name = "S3_BUCKET_ARTIFACTS", value = var.s3_artifacts_bucket },
@@ -325,7 +326,7 @@ resource "aws_ecs_task_definition" "api" {
       }
 
       healthCheck = {
-        command     = ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"]
+        command     = ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
         interval    = 30
         timeout     = 5
         retries     = 3
@@ -360,6 +361,7 @@ resource "aws_ecs_task_definition" "worker" {
       environment = [
         { name = "APP_ENV", value = var.environment },
         { name = "AWS_REGION", value = var.aws_region },
+        { name = "S3_BUCKET_NAME", value = var.s3_videos_bucket },
         { name = "S3_BUCKET_VIDEOS", value = var.s3_videos_bucket },
         { name = "S3_BUCKET_THUMBNAILS", value = var.s3_thumbnails_bucket },
         { name = "S3_BUCKET_ARTIFACTS", value = var.s3_artifacts_bucket },
@@ -411,6 +413,7 @@ resource "aws_ecs_task_definition" "frontend" {
       environment = [
         { name = "NEXT_PUBLIC_APP_ENV", value = var.environment },
         { name = "NEXT_PUBLIC_MOCK_API", value = "false" },
+        { name = "NEXT_PUBLIC_API_URL", value = "http://${aws_lb.this.dns_name}" },
       ]
 
       logConfiguration = {
@@ -498,7 +501,7 @@ resource "aws_ecs_service" "frontend" {
 
   network_configuration {
     subnets          = var.private_subnet_ids
-    security_groups  = [var.sg_ecs_api_id]
+    security_groups  = [var.sg_ecs_frontend_id]
     assign_public_ip = false
   }
 

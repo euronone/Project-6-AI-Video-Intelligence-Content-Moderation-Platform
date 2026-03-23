@@ -97,29 +97,39 @@ export class ApiClient {
     };
   }
 
+  private unwrapData<T>(payload: unknown): T {
+    if (payload && typeof payload === 'object' && 'data' in payload) {
+      return (payload as { data: T }).data;
+    }
+    return payload as T;
+  }
+
   async get<T>(path: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.instance.get<T>(path, config);
-    return response.data;
+    const response = await this.instance.get(path, config);
+    return this.unwrapData<T>(response.data);
   }
 
   async post<T>(path: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.instance.post<T>(path, data, config);
-    return response.data;
+    const response = await this.instance.post(path, data, config);
+    return this.unwrapData<T>(response.data);
   }
 
   async patch<T>(path: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.instance.patch<T>(path, data, config);
-    return response.data;
+    const response = await this.instance.patch(path, data, config);
+    return this.unwrapData<T>(response.data);
   }
 
   async put<T>(path: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.instance.put<T>(path, data, config);
-    return response.data;
+    const response = await this.instance.put(path, data, config);
+    return this.unwrapData<T>(response.data);
   }
 
-  async delete<T>(path: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.instance.delete<T>(path, config);
-    return response.data;
+  async delete<T = void | null>(path: string, config?: AxiosRequestConfig): Promise<T> {
+    const response = await this.instance.delete(path, config);
+    if (response.data === null || response.data === undefined) {
+      return null as T;
+    }
+    return this.unwrapData<T>(response.data);
   }
 }
 

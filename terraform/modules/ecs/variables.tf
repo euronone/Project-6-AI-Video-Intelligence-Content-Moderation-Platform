@@ -36,6 +36,10 @@ variable "sg_ecs_api_id" {
   type = string
 }
 
+variable "sg_ecs_frontend_id" {
+  type = string
+}
+
 variable "sg_ecs_worker_id" {
   type = string
 }
@@ -158,7 +162,7 @@ variable "certificate_arn" {
 
 variable "health_check_path" {
   type    = string
-  default = "/api/v1/health"
+  default = "/health"
 }
 
 variable "tags" {

@@ -66,6 +66,8 @@ export const VIDEO_STATUS_LABELS: Record<string, string> = {
   pending: 'Pending',
   processing: 'Processing',
   completed: 'Completed',
-  failed: 'Failed',
   flagged: 'Flagged',
+  ready: 'Ready',
+  failed: 'Failed',
+  deleted: 'Deleted',
 };

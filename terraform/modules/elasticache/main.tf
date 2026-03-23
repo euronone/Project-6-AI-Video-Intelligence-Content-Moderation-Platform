@@ -33,7 +33,7 @@ resource "aws_elasticache_parameter_group" "redis7" {
 
 resource "aws_elasticache_replication_group" "this" {
   replication_group_id = "${local.name_prefix}-redis"
-  description          = "Redis 7 for ${local.name_prefix} — cache, broker, result backend"
+  description          = "Redis 7 for ${local.name_prefix} - cache, broker, result backend"
 
   engine               = "redis"
   engine_version       = var.engine_version

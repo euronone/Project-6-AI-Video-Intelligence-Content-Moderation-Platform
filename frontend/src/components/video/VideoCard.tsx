@@ -19,8 +19,10 @@ const statusVariant: Record<VideoStatus, 'default' | 'secondary' | 'destructive'
   pending: 'secondary',
   processing: 'info',
   completed: 'success',
-  failed: 'destructive',
   flagged: 'warning',
+  ready: 'success',
+  failed: 'destructive',
+  deleted: 'secondary',
 };
 
 interface VideoCardProps {
@@ -29,6 +31,9 @@ interface VideoCardProps {
 }
 
 export function VideoCard({ video, onDelete }: VideoCardProps) {
+  const videoTitle = video.title ?? video.filename ?? 'Untitled video';
+  const durationSeconds = video.duration_seconds ?? video.duration;
+
   return (
     <Card className="group overflow-hidden transition-shadow hover:shadow-md">
       {/* Thumbnail */}
@@ -36,7 +41,7 @@ export function VideoCard({ video, onDelete }: VideoCardProps) {
         {video.thumbnail_url ? (
           <Image
             src={video.thumbnail_url}
-            alt={video.title ?? video.filename}
+            alt={videoTitle}
             fill
             className="object-cover"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -46,9 +51,9 @@ export function VideoCard({ video, onDelete }: VideoCardProps) {
             <Film className="h-10 w-10 text-muted-foreground/40" />
           </div>
         )}
-        {video.duration !== undefined && (
+        {durationSeconds !== undefined && (
           <span className="absolute bottom-2 right-2 rounded bg-black/70 px-1.5 py-0.5 text-xs text-white">
-            {formatDuration(video.duration)}
+            {formatDuration(durationSeconds)}
           </span>
         )}
       </Link>
@@ -58,7 +63,7 @@ export function VideoCard({ video, onDelete }: VideoCardProps) {
           <div className="min-w-0 flex-1">
             <Link href={ROUTES.videoDetail(video.id)}>
               <p className="truncate font-medium leading-tight hover:underline">
-                {video.title ?? video.filename}
+                {videoTitle}
               </p>
             </Link>
             <p className="mt-1 text-xs text-muted-foreground">

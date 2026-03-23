@@ -1,80 +1,59 @@
 # AWS Deployment Guide — VidShield AI
 
-Complete step-by-step implementation guide for deploying the Infrastructure & DevOps setup.
+Complete step-by-step implementation guide for deploying the Infrastructure & DevOps setup on AWS. This guide covers everything to gather, prerequisites, infrastructure provisioning, Docker builds, ECS deployment, CI/CD setup, and post-deploy verification.
 
 ---
 
-## Required Credentials, API Keys & Secrets
+## Part 1: What to Gather Before Starting
 
-Gather **all of the following before starting**. Nothing can be provisioned without these.
+Nothing can be provisioned without these. Gather **all** before Phase 1.
 
----
+### 1.1 AWS Credentials
 
-### AWS Credentials
+| Item | Where to Get | Used For |
+|------|--------------|----------|
+| AWS Access Key ID | IAM → Users → Security Credentials → Create access key | `aws configure` |
+| AWS Secret Access Key | Same (shown once) | `aws configure` |
+| AWS Account ID | Top-right account menu (12 digits) | S3 naming, ECR URIs, Terraform |
+| AWS Region | Your choice (recommend `us-east-1`) | All resources |
 
-| Item | Where to Get It | Used For |
-|------|----------------|----------|
-| AWS Access Key ID | AWS Console → IAM → Users → Security Credentials | AWS CLI authentication |
-| AWS Secret Access Key | Same as above (shown once at creation) | AWS CLI authentication |
-| AWS Account ID | AWS Console → top-right account menu (12-digit number) | S3 bucket naming, ECR URIs, IAM ARNs |
-| AWS Region | Your choice (recommend `us-east-1`) | All resource provisioning |
+**Security:** Never commit credentials. Use `~/.aws/credentials` or env vars.
 
-> Never commit AWS credentials to git. Store them in `~/.aws/credentials` (set by `aws configure`) or as environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`).
+### 1.2 Third-Party API Keys
 
----
+| Key | Source | Purpose |
+|-----|--------|---------|
+| `OPENAI_API_KEY` | [platform.openai.com](https://platform.openai.com) → API Keys | GPT-4o vision, Whisper |
+| `PINECONE_API_KEY` | [app.pinecone.io](https://app.pinecone.io) | Vector similarity search |
+| `SENTRY_DSN` | [sentry.io](https://sentry.io) (optional) | Error tracking |
 
-### Third-Party API Keys
+### 1.3 Database Credentials (you choose)
 
-| Key | Where to Get It | Used For |
-|-----|----------------|----------|
-| `OPENAI_API_KEY` | [platform.openai.com](https://platform.openai.com) → API Keys | GPT-4o vision, Whisper transcription |
-| `PINECONE_API_KEY` | [app.pinecone.io](https://app.pinecone.io) → API Keys | Vector similarity search |
-| `SENTRY_DSN` | [sentry.io](https://sentry.io) → Project → Settings → Client Keys | Error tracking (optional but recommended) |
+| Item | Value |
+|------|-------|
+| RDS username | `vidshield` (hardcoded in Terraform) |
+| RDS password | Strong, 16+ chars, no `@`, `/`, `"` |
+| RDS database | `vidshield` |
+| RDS port | `5432` |
 
----
+`DATABASE_URL` format:  
+`postgresql+asyncpg://vidshield:<password>@<rds-endpoint>:5432/vidshield`
 
-### Database Credentials
+### 1.4 Application Secrets
 
-| Item | Value / Notes |
-|------|--------------|
-| RDS Master Username | `vidshield` (hardcoded in Terraform) |
-| RDS Master Password | **You choose** — must be strong (min 16 chars, no `@`, `/`, `"`) |
-| RDS Database Name | `vidshield` (hardcoded in Terraform) |
-| RDS Port | `5432` (PostgreSQL default) |
-| RDS Endpoint | Available **after** `terraform apply` (e.g. `vidshield-dev-postgres.xxxx.us-east-1.rds.amazonaws.com`) |
+- **SECRET_KEY:** `openssl rand -hex 32`
 
-> The full `DATABASE_URL` format: `postgresql+asyncpg://vidshield:<password>@<rds-endpoint>:5432/vidshield`
+### 1.5 Redis URLs (created after Terraform)
 
----
+| Use | Format |
+|-----|--------|
+| App/cache | `rediss://<redis-endpoint>:6379/0` |
+| Celery broker | `rediss://<redis-endpoint>:6379/1` |
+| Celery result | `rediss://<redis-endpoint>:6379/2` |
 
-### Redis / ElastiCache Details
+### 1.6 AWS S3 Buckets (Auto-Provisioned by Terraform)
 
-| Item | Value / Notes |
-|------|--------------|
-| Redis Port | `6379` |
-| Redis Endpoint | Available **after** `terraform apply` |
-| TLS | Enabled in staging/prod (`rediss://`), optional in dev |
-
-> The full `REDIS_URL` format: `rediss://<redis-endpoint>:6379/0`
-> Celery broker uses DB index 1: `rediss://<redis-endpoint>:6379/1`
-> Celery result backend uses DB index 2: `rediss://<redis-endpoint>:6379/2`
-
----
-
-### Application Secrets
-
-| Item | Value / Notes |
-|------|--------------|
-| `SECRET_KEY` | Random 64-char hex string — generate with `openssl rand -hex 32` |
-| `JWT_ALGORITHM` | `HS256` (default, no change needed) |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `15` (default) |
-| `REFRESH_TOKEN_EXPIRE_DAYS` | `7` (default) |
-
----
-
-### AWS S3 Details (Auto-Provisioned by Terraform)
-
-These are created by Terraform — you do not need to create them manually. Note them after `terraform apply`.
+Note these after `terraform apply` — you do not create them manually:
 
 | Bucket | Purpose |
 |--------|---------|
@@ -82,55 +61,12 @@ These are created by Terraform — you do not need to create them manually. Note
 | `vidshield-<env>-thumbnails-<account-id>` | Video thumbnails served via CloudFront |
 | `vidshield-<env>-artifacts-<account-id>` | AI analysis artifacts (frames, transcripts) |
 
----
+### 1.7 Production-Only (for prod environment)
 
-### GitHub Actions Secrets (CI/CD)
+- **ACM Certificate ARN** — Request in us-east-1 for your domain (e.g. `app.vidshield.ai`, `*.vidshield.ai`).
+- **Custom domain** — DNS records for CloudFront / ALB.
 
-Required in GitHub repo → **Settings → Secrets and Variables → Actions**:
-
-| Secret Name | Value |
-|-------------|-------|
-| `AWS_ROLE_ARN_STAGING` | IAM role ARN for staging OIDC (created in Phase 5) |
-| `AWS_ROLE_ARN_PROD` | IAM role ARN for prod OIDC (created in Phase 5) |
-| `ECR_REGISTRY` | `<account-id>.dkr.ecr.us-east-1.amazonaws.com` |
-| `AWS_ACCOUNT_ID` | 12-digit AWS account number |
-| `TF_STATE_BUCKET_STAGING` | `vidshield-tf-state-<account-id>` |
-| `TF_STATE_BUCKET_PROD` | `vidshield-tf-state-<account-id>` |
-| `TF_LOCK_TABLE` | `vidshield-tf-locks` |
-| `DB_SECRET_ARN_STAGING` | Secrets Manager ARN for staging `DATABASE_URL` |
-| `DB_SECRET_ARN_PROD` | Secrets Manager ARN for prod `DATABASE_URL` |
-| `REDIS_SECRET_ARN_STAGING` | Secrets Manager ARN for staging `REDIS_URL` |
-| `REDIS_SECRET_ARN_PROD` | Secrets Manager ARN for prod `REDIS_URL` |
-| `SECRET_KEY_ARN_STAGING` | Secrets Manager ARN for staging `SECRET_KEY` |
-| `SECRET_KEY_ARN_PROD` | Secrets Manager ARN for prod `SECRET_KEY` |
-| `OPENAI_API_KEY_ARN` | Secrets Manager ARN for `OPENAI_API_KEY` |
-| `PINECONE_API_KEY_ARN` | Secrets Manager ARN for `PINECONE_API_KEY` |
-| `DB_PASSWORD_SECRET_ARN_STAGING` | Secrets Manager ARN for staging RDS password |
-| `DB_PASSWORD_SECRET_ARN_PROD` | Secrets Manager ARN for prod RDS password |
-| `ACM_CERT_ARN_PROD` | ACM certificate ARN for prod HTTPS (us-east-1) |
-| `CLOUDFRONT_DISTRIBUTION_ID_PROD` | CloudFront distribution ID (from `terraform output`) |
-
----
-
-### ACM Certificate (Production HTTPS Only)
-
-For production with a custom domain, you need an SSL certificate in **us-east-1**:
-
-```bash
-# Request a certificate (domain validation)
-aws acm request-certificate \
-  --domain-name app.vidshield.ai \
-  --subject-alternative-names "*.vidshield.ai" \
-  --validation-method DNS \
-  --region us-east-1
-
-# Note the ARN — add to prod.tfvars as certificate_arn
-# Complete DNS validation by adding the CNAME record shown in ACM console
-```
-
----
-
-### Secrets Checklist
+### 1.8 Secrets Checklist
 
 Use this before running `terraform apply`:
 
@@ -171,120 +107,87 @@ GitHub Actions
 
 ---
 
-## Pre-requisites
+## Part 2: Prerequisites
 
-Before anything, you need:
+Install and verify:
 
 ```bash
-# Required tools
 aws --version          # AWS CLI v2
 terraform --version    # >= 1.6.0
-docker --version       # Docker Desktop
+docker --version
 git --version
 ```
 
 Install if missing:
+
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
 - [Terraform](https://developer.hashicorp.com/terraform/install)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop)
 
 ---
 
-## Phase 1 — AWS Account Setup (One-Time)
+## Part 3: Implementation Phases
 
-### 1.1 Configure AWS CLI
+### Phase 1 — AWS Account Setup (One-Time)
+
+**1.1 Configure AWS CLI**
 
 ```bash
 aws configure
-# AWS Access Key ID: <your-key>
-# AWS Secret Access Key: <your-secret>
-# Default region: us-east-1
-# Default output format: json
+# Enter Access Key ID, Secret, region us-east-1, output json
 ```
 
-### 1.2 Create ECR Repositories
+**1.2 Create ECR Repositories**
 
 ```bash
-# Create ECR repos for backend and frontend images
 aws ecr create-repository --repository-name vidshield-backend --region us-east-1
 aws ecr create-repository --repository-name vidshield-frontend --region us-east-1
-
-# Note the registry URI from the output:
-# 123456789012.dkr.ecr.us-east-1.amazonaws.com
+# Note registry URI: <account-id>.dkr.ecr.us-east-1.amazonaws.com
 ```
 
-### 1.3 Create Terraform Remote State Resources
+**1.3 Create Terraform Remote State Resources**
 
 ```bash
-# Replace <account-id> with your actual AWS account ID
-aws s3api create-bucket \
-  --bucket vidshield-tf-state-<account-id> \
-  --region us-east-1
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 
-# Enable versioning on state bucket
-aws s3api put-bucket-versioning \
-  --bucket vidshield-tf-state-<account-id> \
+aws s3api create-bucket --bucket vidshield-tf-state-${ACCOUNT_ID} --region us-east-1
+aws s3api put-bucket-versioning --bucket vidshield-tf-state-${ACCOUNT_ID} \
   --versioning-configuration Status=Enabled
+aws s3api put-bucket-encryption --bucket vidshield-tf-state-${ACCOUNT_ID} \
+  --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
 
-# Enable encryption
-aws s3api put-bucket-encryption \
-  --bucket vidshield-tf-state-<account-id> \
-  --server-side-encryption-configuration \
-    '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
-
-# Create DynamoDB lock table
-aws dynamodb create-table \
-  --table-name vidshield-tf-locks \
+aws dynamodb create-table --table-name vidshield-tf-locks \
   --attribute-definitions AttributeName=LockID,AttributeType=S \
   --key-schema AttributeName=LockID,KeyType=HASH \
-  --billing-mode PAY_PER_REQUEST \
-  --region us-east-1
+  --billing-mode PAY_PER_REQUEST --region us-east-1
 ```
 
-### 1.4 Store All Secrets in AWS Secrets Manager
+**1.4 Create Secrets in AWS Secrets Manager**
+
+Create these **before** Terraform (RDS/Redis endpoints come after apply):
 
 ```bash
-# DB master password
-aws secretsmanager create-secret \
-  --name vidshield/dev/db-password \
-  --secret-string "your-strong-db-password"
+# DB password
+aws secretsmanager create-secret --name vidshield/dev/db-password --secret-string "your-strong-password"
 
-# App secret key (generate a strong random key)
-aws secretsmanager create-secret \
-  --name vidshield/dev/secret-key \
-  --secret-string "$(openssl rand -hex 32)"
+# App secret key
+aws secretsmanager create-secret --name vidshield/dev/secret-key --secret-string "$(openssl rand -hex 32)"
 
-# OpenAI API key
-aws secretsmanager create-secret \
-  --name vidshield/dev/openai-api-key \
-  --secret-string "sk-..."
-
-# Pinecone API key
-aws secretsmanager create-secret \
-  --name vidshield/dev/pinecone-api-key \
-  --secret-string "your-pinecone-key"
-
-# DATABASE_URL (used by the app at runtime — after RDS is provisioned)
-# Come back to this after Step 2.3 gives you the RDS endpoint
-aws secretsmanager create-secret \
-  --name vidshield/dev/database-url \
-  --secret-string "postgresql+asyncpg://vidshield:<password>@<rds-endpoint>:5432/vidshield"
-
-# REDIS_URL (after ElastiCache is provisioned)
-aws secretsmanager create-secret \
-  --name vidshield/dev/redis-url \
-  --secret-string "rediss://<redis-endpoint>:6379/0"
+# API keys
+aws secretsmanager create-secret --name vidshield/dev/openai-api-key --secret-string "sk-..."
+aws secretsmanager create-secret --name vidshield/dev/pinecone-api-key --secret-string "your-pinecone-key"
 ```
 
-> Note the ARN of each secret — you will need them for Terraform in Phase 2.
+Note the ARN of each secret.  
+`vidshield/dev/database-url` and `vidshield/dev/redis-url` are created **after** Terraform apply (Phase 2.5).
 
 ---
 
-## Phase 2 — Terraform: Provision Infrastructure
+### Phase 2 — Terraform: Provision Infrastructure
 
-### 2.1 Enable the S3 Backend
+**2.1 Enable S3 Backend**
 
-Open `terraform/main.tf` and uncomment the backend block:
+In `terraform/main.tf`, uncomment the backend block and replace `<account-id>`:
 
 ```hcl
 backend "s3" {
@@ -296,204 +199,189 @@ backend "s3" {
 }
 ```
 
-### 2.2 Fill in Secret ARNs in dev.tfvars
+**2.2 Fill Secret ARNs in dev.tfvars**
 
-Open `terraform/environments/dev.tfvars` and uncomment + fill the secret ARN lines:
+In `terraform/environments/dev.tfvars`, uncomment and set:
 
 ```hcl
 db_password_secret_arn  = "arn:aws:secretsmanager:us-east-1:<account>:secret:vidshield/dev/db-password-xxxx"
 secret_key_arn          = "arn:aws:secretsmanager:us-east-1:<account>:secret:vidshield/dev/secret-key-xxxx"
 openai_api_key_arn      = "arn:aws:secretsmanager:us-east-1:<account>:secret:vidshield/dev/openai-api-key-xxxx"
 pinecone_api_key_arn    = "arn:aws:secretsmanager:us-east-1:<account>:secret:vidshield/dev/pinecone-api-key-xxxx"
-ecr_backend_image       = "123456789012.dkr.ecr.us-east-1.amazonaws.com/vidshield-backend:latest"
-ecr_frontend_image      = "123456789012.dkr.ecr.us-east-1.amazonaws.com/vidshield-frontend:latest"
-aws_account_id          = "123456789012"
+ecr_backend_image       = "<account>.dkr.ecr.us-east-1.amazonaws.com/vidshield-backend:latest"
+ecr_frontend_image      = "<account>.dkr.ecr.us-east-1.amazonaws.com/vidshield-frontend:latest"
+aws_account_id          = "<account-id>"
 ```
 
-### 2.3 Initialize and Apply Terraform
+**Note:** `db_secret_arn` and `redis_secret_arn` require RDS/Redis endpoints from the first apply. Use the two-pass approach below.
+
+**2.3 Two-Pass Terraform (Secrets Dependency)**
+
+Terraform needs `db_secret_arn` and `redis_secret_arn`, but those secrets need RDS/Redis endpoints. Options:
+
+- **Option A:** Create placeholder secrets with dummy URLs so Terraform can run. Immediately after apply, create the real secrets and re-apply.
+- **Option B:** Make `db_secret_arn`/`redis_secret_arn` optional in Terraform and wire after first apply.
+
+Recommended: Use placeholder secrets (e.g. `postgresql+asyncpg://vidshield:placeholder@placeholder:5432/vidshield`) so Terraform can run. Create the real secrets after the first apply and re-apply.
+
+**2.4 Initialize and Apply**
 
 ```bash
 cd terraform
-
-# Initialize — downloads providers, connects to S3 backend
 terraform init
-
-# Preview what will be created (~50 resources)
 terraform plan -var-file=environments/dev.tfvars
-
-# Apply — takes ~10-15 minutes on first run
 terraform apply -var-file=environments/dev.tfvars
 ```
 
-After apply completes, note the outputs:
+**2.5 Create Runtime Secrets (After Apply)**
 
 ```bash
-terraform output                        # shows all outputs
-terraform output rds_endpoint           # use this to create the database-url secret
-terraform output redis_primary_endpoint # use this to create the redis-url secret
+RDS_ENDPOINT=$(terraform output -raw rds_endpoint)
+REDIS_ENDPOINT=$(terraform output -raw redis_primary_endpoint)
+
+aws secretsmanager create-secret --name vidshield/dev/database-url \
+  --secret-string "postgresql+asyncpg://vidshield:<password>@${RDS_ENDPOINT}:5432/vidshield"
+
+aws secretsmanager create-secret --name vidshield/dev/redis-url \
+  --secret-string "rediss://${REDIS_ENDPOINT}:6379/0"
 ```
 
-### 2.4 Create the Remaining Secrets (Now That RDS/Redis Endpoints Are Known)
+Add `db_secret_arn` and `redis_secret_arn` to dev.tfvars, then:
 
 ```bash
-# Create the runtime connection secrets using endpoints from terraform output
-aws secretsmanager create-secret \
-  --name vidshield/dev/database-url \
-  --secret-string "postgresql+asyncpg://vidshield:<password>@<rds-endpoint>:5432/vidshield"
-
-aws secretsmanager create-secret \
-  --name vidshield/dev/redis-url \
-  --secret-string "rediss://<redis-endpoint>:6379/0"
-
-# Add their ARNs to dev.tfvars and re-apply
 terraform apply -var-file=environments/dev.tfvars
 ```
 
 ---
 
-## Phase 3 — Docker: Build and Push Images to ECR
+### Phase 3 — Docker: Build and Push Images
 
-### 3.1 Build Images Locally First (Validate)
+**3.1 Validate Build Locally**
 
 ```bash
-# From project root
 make build
-# or
-docker compose build
+# or: docker compose build
 ```
 
-### 3.2 Push to ECR
+**3.2 Push to ECR**
 
 ```bash
-# Login to ECR
-aws ecr get-login-password --region us-east-1 | \
-  docker login --username AWS --password-stdin \
-  123456789012.dkr.ecr.us-east-1.amazonaws.com
+ECR_REGISTRY="<account-id>.dkr.ecr.us-east-1.amazonaws.com"
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ECR_REGISTRY}
 
-# Tag and push backend
-docker tag vidshield-backend:latest \
-  123456789012.dkr.ecr.us-east-1.amazonaws.com/vidshield-backend:latest
+docker tag vidshield-backend:latest ${ECR_REGISTRY}/vidshield-backend:latest
+docker push ${ECR_REGISTRY}/vidshield-backend:latest
 
-docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/vidshield-backend:latest
-
-# Tag and push frontend
-docker tag vidshield-frontend:latest \
-  123456789012.dkr.ecr.us-east-1.amazonaws.com/vidshield-frontend:latest
-
-docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/vidshield-frontend:latest
+docker tag vidshield-frontend:latest ${ECR_REGISTRY}/vidshield-frontend:latest
+docker push ${ECR_REGISTRY}/vidshield-frontend:latest
 ```
 
-Or use the Makefile:
+Or use the Makefile (after configuring `docker-compose.prod.yml` for ECR):
 
 ```bash
 make push
 ```
 
+Ensure `docker-compose` build produces images named `vidshield-backend` and `vidshield-frontend`, or adjust tags accordingly.
+
 ---
 
-## Phase 4 — ECS: Deploy Services
+### Phase 4 — ECS: Deploy and Verify
 
-After images are in ECR and Terraform has provisioned ECS services:
+**4.1 Force New Deployment**
 
 ```bash
-# Force ECS to pull the new images and restart
-aws ecs update-service \
-  --cluster vidshield-dev-cluster \
-  --service vidshield-dev-api \
-  --force-new-deployment \
-  --region us-east-1
-
-aws ecs update-service \
-  --cluster vidshield-dev-cluster \
-  --service vidshield-dev-worker \
-  --force-new-deployment \
-  --region us-east-1
-
-aws ecs update-service \
-  --cluster vidshield-dev-cluster \
-  --service vidshield-dev-frontend \
-  --force-new-deployment \
-  --region us-east-1
-
-# Wait for services to stabilise
-aws ecs wait services-stable \
-  --cluster vidshield-dev-cluster \
-  --services vidshield-dev-api vidshield-dev-worker vidshield-dev-frontend
-
-# Verify health
-curl http://<alb-dns-name>/api/v1/health
+aws ecs update-service --cluster vidshield-dev-cluster --service vidshield-dev-api --force-new-deployment --region us-east-1
+aws ecs update-service --cluster vidshield-dev-cluster --service vidshield-dev-worker --force-new-deployment --region us-east-1
+aws ecs update-service --cluster vidshield-dev-cluster --service vidshield-dev-frontend --force-new-deployment --region us-east-1
 ```
 
----
-
-## Phase 5 — GitHub Actions: CI/CD Setup
-
-### 5.1 Create a GitHub OIDC IAM Role
+**4.2 Wait for Stability**
 
 ```bash
-# Create the OIDC provider for GitHub Actions (one-time per AWS account)
+aws ecs wait services-stable --cluster vidshield-dev-cluster \
+  --services vidshield-dev-api vidshield-dev-worker vidshield-dev-frontend --region us-east-1
+```
+
+**4.3 Verify Health**
+
+```bash
+ALB_DNS=$(aws elbv2 describe-load-balancers --names vidshield-dev-alb --query 'LoadBalancers[0].DNSName' --output text --region us-east-1)
+curl http://${ALB_DNS}/api/v1/health
+```
+
+**4.4 Optional: Seed Admin User**
+
+The ECS API task runs `alembic upgrade head` before uvicorn (`terraform/modules/ecs/main.tf`). Admin seed is **not** run in ECS. To create an initial admin:
+
+- Run a one-off ECS task with `python scripts/seed_admin.py`, or
+- Use `docker compose run` against RDS (with appropriate security/network access).
+
+---
+
+### Phase 5 — GitHub Actions CI/CD (Staging/Prod)
+
+**5.1 Create GitHub OIDC Provider (One-Time)**
+
+```bash
 aws iam create-open-id-connect-provider \
   --url https://token.actions.githubusercontent.com \
   --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1 \
   --client-id-list sts.amazonaws.com
-
-# Create the IAM role that GitHub Actions will assume
-# (attach policies: ECS full access, ECR push, Terraform S3/DynamoDB)
 ```
 
-### 5.2 Add GitHub Secrets
+**5.2 Create IAM Role for GitHub Actions**
 
-Go to your repo → **Settings → Secrets and Variables → Actions** and add:
+Create an IAM role that:
 
-| Secret | Value |
-|--------|-------|
-| `AWS_ROLE_ARN_STAGING` | IAM role ARN for staging deploys |
-| `AWS_ROLE_ARN_PROD` | IAM role ARN for prod deploys |
-| `ECR_REGISTRY` | `123456789012.dkr.ecr.us-east-1.amazonaws.com` |
-| `AWS_ACCOUNT_ID` | `123456789012` |
+- Trusts `token.actions.githubusercontent.com` with conditions for your repo.
+- Has policies: ECS, ECR push, S3 (Terraform state), DynamoDB (locks), Secrets Manager read.
+
+**5.3 Add GitHub Secrets**
+
+Repo → Settings → Secrets and Variables → Actions. Add:
+
+| Secret Name | Value |
+|-------------|-------|
+| `AWS_ROLE_ARN_STAGING` | IAM role ARN for staging OIDC |
+| `AWS_ROLE_ARN_PROD` | IAM role ARN for prod OIDC |
+| `ECR_REGISTRY` | `<account-id>.dkr.ecr.us-east-1.amazonaws.com` |
+| `AWS_ACCOUNT_ID` | 12-digit AWS account number |
 | `TF_STATE_BUCKET_STAGING` | `vidshield-tf-state-<account-id>` |
-| `TF_STATE_BUCKET_PROD` | same bucket, different key |
+| `TF_STATE_BUCKET_PROD` | `vidshield-tf-state-<account-id>` |
 | `TF_LOCK_TABLE` | `vidshield-tf-locks` |
-| `DB_SECRET_ARN_STAGING` | ARN of staging DB secret |
-| `REDIS_SECRET_ARN_STAGING` | ARN of staging Redis secret |
-| `SECRET_KEY_ARN_STAGING` | ARN of staging secret key |
-| `OPENAI_API_KEY_ARN` | ARN of OpenAI secret |
-| `PINECONE_API_KEY_ARN` | ARN of Pinecone secret |
-| `DB_PASSWORD_SECRET_ARN_STAGING` | ARN of staging DB password |
-| `DB_SECRET_ARN_PROD` | ARN of prod DB secret |
-| `REDIS_SECRET_ARN_PROD` | ARN of prod Redis secret |
-| `SECRET_KEY_ARN_PROD` | ARN of prod secret key |
-| `DB_PASSWORD_SECRET_ARN_PROD` | ARN of prod DB password |
-| `ACM_CERT_ARN_PROD` | ACM certificate ARN for prod HTTPS |
-| `CLOUDFRONT_DISTRIBUTION_ID_PROD` | CloudFront distribution ID for prod |
+| `DB_SECRET_ARN_STAGING` | Secrets Manager ARN for staging `DATABASE_URL` |
+| `DB_SECRET_ARN_PROD` | Secrets Manager ARN for prod `DATABASE_URL` |
+| `REDIS_SECRET_ARN_STAGING` | Secrets Manager ARN for staging `REDIS_URL` |
+| `REDIS_SECRET_ARN_PROD` | Secrets Manager ARN for prod `REDIS_URL` |
+| `SECRET_KEY_ARN_STAGING` | Secrets Manager ARN for staging `SECRET_KEY` |
+| `SECRET_KEY_ARN_PROD` | Secrets Manager ARN for prod `SECRET_KEY` |
+| `OPENAI_API_KEY_ARN` | Secrets Manager ARN for `OPENAI_API_KEY` |
+| `PINECONE_API_KEY_ARN` | Secrets Manager ARN for `PINECONE_API_KEY` |
+| `DB_PASSWORD_SECRET_ARN_STAGING` | Secrets Manager ARN for staging RDS password |
+| `DB_PASSWORD_SECRET_ARN_PROD` | Secrets Manager ARN for prod RDS password |
+| `ACM_CERT_ARN_PROD` | ACM certificate ARN for prod HTTPS (us-east-1) |
+| `CLOUDFRONT_DISTRIBUTION_ID_PROD` | CloudFront distribution ID (from `terraform output`) |
 
-### 5.3 Create GitHub Environments
+**5.4 Create GitHub Environments**
 
-Go to **Settings → Environments** and create:
+Settings → Environments → Create:
+
 - `staging` — no protection rules
 - `production` — add **Required reviewers** (yourself or your team)
 
-### 5.4 Trigger the Pipelines
+**5.5 Trigger Deploys**
 
-```bash
-# CI runs automatically on every push/PR
-
-# CD staging — push to main branch
-git push origin main
-
-# CD prod — push a semver tag
-git tag v1.0.0
-git push origin v1.0.0
-```
+- **Staging:** Push to `main` (see `.github/workflows/cd-staging.yml`).
+- **Prod:** Push a semver tag (e.g. `v1.0.0`) for `.github/workflows/cd-prod.yml`.
 
 ---
 
-## Phase 6 — Local Development (No AWS Needed)
+### Phase 6 — Local Development (No AWS Needed)
 
-For day-to-day development, use Docker Compose — no AWS account required:
+For day-to-day development, use Docker Compose:
 
 ```bash
-# Start everything locally (postgres, redis, backend, worker, frontend)
 make dev
 # or
 docker compose up --build
@@ -508,26 +396,26 @@ docker compose up --build
 
 ---
 
-## Deployment Order Summary
+## Part 4: Deployment Order Summary
 
 ```
 1. AWS account setup (ECR, S3 state bucket, DynamoDB lock, Secrets Manager)
          ↓
-2. terraform init → plan → apply
+2. terraform init → plan → apply (two-pass if needed for DB/Redis secrets)
    (provisions VPC, RDS, Redis, ECS, ALB, S3, SQS, CloudFront, Monitoring)
          ↓
 3. docker build → push to ECR
          ↓
 4. aws ecs update-service  (or automatic via GitHub Actions CD)
          ↓
-5. Verify: curl ALB /api/v1/health
+5. Verify: curl <alb>/api/v1/health
 ```
 
-For staging and production, steps 3–5 are **fully automated** by `.github/workflows/cd-staging.yml` and `.github/workflows/cd-prod.yml` — you just push code or tag a release.
+For staging and production, steps 3–5 are **fully automated** by `.github/workflows/cd-staging.yml` and `.github/workflows/cd-prod.yml`.
 
 ---
 
-## Terraform Per-Environment Cheatsheet
+## Part 5: Terraform Per-Environment Cheatsheet
 
 ```bash
 # Dev
@@ -555,6 +443,46 @@ make tf-plan  ENV=dev
 make tf-apply ENV=dev
 make tf-plan  ENV=staging
 make tf-apply ENV=staging
+```
+
+---
+
+## Part 6: Post-Deploy Checklist
+
+- [ ] Health endpoint returns 200 (`/api/v1/health`)
+- [ ] Frontend loads (ALB or CloudFront URL)
+- [ ] Database migrations applied (Alembic runs on API container start)
+- [ ] Admin user seeded (if required)
+- [ ] CloudWatch logs for API/Worker/Frontend
+- [ ] S3 buckets created (videos, thumbnails, artifacts)
+- [ ] Pinecone index created and configured (env/index name)
+- [ ] DNS and ACM certificate (prod only)
+
+---
+
+## Part 7: Pinecone Setup (Not in Terraform)
+
+Pinecone is a managed SaaS. You must:
+
+1. Create a Pinecone project and index at [app.pinecone.io](https://app.pinecone.io).
+2. Configure `PINECONE_API_KEY` and any index/environment names in the application config.
+3. Ensure the backend has the correct Pinecone env vars (from Secrets Manager).
+
+---
+
+## Part 8: ACM Certificate (Production HTTPS Only)
+
+For production with a custom domain, request an SSL certificate in **us-east-1**:
+
+```bash
+aws acm request-certificate \
+  --domain-name app.vidshield.ai \
+  --subject-alternative-names "*.vidshield.ai" \
+  --validation-method DNS \
+  --region us-east-1
+
+# Note the ARN — add to prod.tfvars as certificate_arn
+# Complete DNS validation by adding the CNAME record shown in ACM console
 ```
 
 ---

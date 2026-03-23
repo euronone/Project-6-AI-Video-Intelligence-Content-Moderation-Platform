@@ -17,13 +17,13 @@ terraform {
   #
   # Then uncomment:
   #
-  # backend "s3" {
-  #   bucket         = "vidshield-tf-state-<aws_account_id>"
-  #   key            = "envs/<environment>/terraform.tfstate"
-  #   region         = "us-east-1"
-  #   encrypt        = true
-  #   dynamodb_table = "vidshield-tf-locks"
-  # }
+  backend "s3" {
+    bucket         = "vidshield-tf-state-602498848126"
+    key            = "envs/dev/terraform.tfstate"
+    region         = "us-east-1"
+    encrypt        = true
+    dynamodb_table = "vidshield-tf-locks"
+  }
 }
 
 provider "aws" {
@@ -127,6 +127,7 @@ module "ecs" {
   private_subnet_ids = module.vpc.private_subnet_ids
   sg_alb_id          = module.vpc.sg_alb_id
   sg_ecs_api_id      = module.vpc.sg_ecs_api_id
+  sg_ecs_frontend_id = module.vpc.sg_ecs_frontend_id
   sg_ecs_worker_id   = module.vpc.sg_ecs_worker_id
 
   ecr_backend_image  = var.ecr_backend_image

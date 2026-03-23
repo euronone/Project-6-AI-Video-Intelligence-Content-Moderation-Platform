@@ -1,71 +1,75 @@
+// VideoStatus values match the backend VideoStatus enum
 export type VideoStatus =
   | 'pending'
   | 'processing'
   | 'completed'
+  | 'flagged'
+  | 'ready'
   | 'failed'
-  | 'flagged';
+  | 'deleted';
 
 export type VideoSource = 'upload' | 'api' | 'live';
 
+// Matches backend VideoResponse schema
 export interface Video {
   id: string;
-  filename: string;
   title?: string;
+  filename?: string;
   description?: string;
   source: VideoSource;
   status: VideoStatus;
   duration?: number;
-  size?: number;
+  duration_seconds?: number;
+  file_size_bytes?: number;
   content_type?: string;
-  storage_key?: string;
+  s3_key?: string;
+  thumbnail_s3_key?: string;
   thumbnail_url?: string;
   playback_url?: string;
+  moderation_status?: string;
+  owner_id?: string;
   tenant_id?: string;
-  job_id?: string;
   created_at: string;
   updated_at: string;
 }
 
+// Matches backend PaginatedVideos — no data wrapper
 export interface VideoListResponse {
-  data: {
-    items: Video[];
-    total: number;
-    page: number;
-    page_size: number;
-  };
+  items: Video[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 
-export interface VideoResponse {
-  data: Video;
-}
+// GET /videos/{id} returns Video directly — no data wrapper
+export type VideoResponse = Video;
 
 export interface UploadUrlRequest {
   filename: string;
   content_type: string;
-  size: number;
+  file_size_bytes?: number;
 }
 
+// Matches backend UploadUrlResponse — no data wrapper
 export interface UploadUrlResponse {
-  data: {
-    upload_url: string;
-    video_id: string;
-    expires_at: string;
-  };
+  upload_url: string;
+  s3_key: string;
+  expires_in: number;
 }
 
+// Matches backend VideoCreate schema
 export interface RegisterUploadRequest {
+  title: string;
   source: 'upload';
-  storage_key: string;
-  filename: string;
-  content_type: string;
+  s3_key: string;
+  content_type?: string;
+  file_size_bytes?: number;
+  description?: string;
+  tags?: string[];
 }
 
-export interface RegisterUploadResponse {
-  data: {
-    video_id: string;
-    job_id: string;
-  };
-}
+// POST /videos returns the full Video object
+export type RegisterUploadResponse = Video;
 
 export interface VideoListParams {
   page?: number;

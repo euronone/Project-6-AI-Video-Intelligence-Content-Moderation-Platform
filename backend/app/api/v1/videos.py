@@ -27,6 +27,7 @@ from app.schemas.video import (
     VideoStatusResponse,
     VideoUpdate,
 )
+from app.services.storage_service import StorageService, get_storage_service
 
 router = APIRouter(prefix="/videos", tags=["videos"])
 logger = structlog.get_logger(__name__)
@@ -110,15 +111,18 @@ async def list_videos(
 async def get_upload_url(
     body: UploadUrlRequest,
     current_user: CurrentUser,
+    storage: Annotated[StorageService, Depends(get_storage_service)],
 ) -> UploadUrlResponse:
-    # Stub: in production, calls storage_service.generate_presigned_url()
-    # Returns a deterministic s3_key so the client can call POST /videos afterwards.
     s3_key = f"uploads/{current_user.id}/{uuid.uuid4()}/{body.filename}"
-    stub_url = f"https://{settings.S3_BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com/{s3_key}"
+    upload_url = storage.presigned_put_url(
+        s3_key=s3_key,
+        content_type=body.content_type,
+        expires=settings.S3_PRESIGNED_URL_EXPIRE,
+    )
 
     logger.info("upload_url_generated", user_id=str(current_user.id), s3_key=s3_key)
     return UploadUrlResponse(
-        upload_url=stub_url,
+        upload_url=upload_url,
         s3_key=s3_key,
         expires_in=settings.S3_PRESIGNED_URL_EXPIRE,
     )

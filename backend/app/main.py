@@ -1,6 +1,7 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
+import socketio
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -70,3 +71,40 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
+
+# ── Socket.IO ─────────────────────────────────────────────────────────────────
+# Wraps the FastAPI ASGI app so /socket.io/ requests are handled by Socket.IO
+# and everything else passes through to FastAPI.
+sio = socketio.AsyncServer(
+    async_mode="asgi",
+    cors_allowed_origins=settings.CORS_ORIGINS,
+    logger=False,
+    engineio_logger=False,
+)
+
+
+@sio.event
+async def connect(sid: str, environ: dict, auth: dict | None = None) -> None:  # noqa: ARG001
+    pass
+
+
+@sio.event
+async def disconnect(sid: str) -> None:  # noqa: ARG001
+    pass
+
+
+@sio.event
+async def join(sid: str, data: dict) -> None:
+    room = data.get("room")
+    if room:
+        await sio.enter_room(sid, room)
+
+
+@sio.event
+async def leave(sid: str, data: dict) -> None:
+    room = data.get("room")
+    if room:
+        await sio.leave_room(sid, room)
+
+
+asgi_app = socketio.ASGIApp(sio, other_asgi_app=app)
