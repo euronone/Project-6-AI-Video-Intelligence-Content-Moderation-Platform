@@ -25,7 +25,7 @@ export function useModerationQueue(params: ModerationQueueParams = {}) {
     queryKey: moderationKeys.queue(params),
     queryFn: () =>
       apiClient.get<ModerationQueueResponse>('/moderation/queue', { params }),
-    select: (res) => res.data,
+    staleTime: 30_000,
     refetchInterval: 30_000,
   });
 }
@@ -35,7 +35,6 @@ export function useModerationResult(videoId: string) {
     queryKey: moderationKeys.result(videoId),
     queryFn: () =>
       apiClient.get<ModerationResultResponse>(`/moderation/videos/${videoId}`),
-    select: (res) => res.data,
     enabled: !!videoId,
   });
 }
@@ -60,7 +59,6 @@ export function usePolicies() {
   return useQuery({
     queryKey: moderationKeys.policies,
     queryFn: () => apiClient.get<PolicyListResponse>('/policies'),
-    select: (res) => res.data,
   });
 }
 
@@ -68,7 +66,6 @@ export function usePolicy(id: string) {
   return useQuery({
     queryKey: moderationKeys.policy(id),
     queryFn: () => apiClient.get<PolicyResponse>(`/policies/${id}`),
-    select: (res) => res.data,
     enabled: !!id,
   });
 }

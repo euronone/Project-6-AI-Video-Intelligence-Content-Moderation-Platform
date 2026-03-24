@@ -2,7 +2,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User } from '@/types/user';
 import { apiClient } from '@/lib/api';
-import { connectSocket, disconnectSocket } from '@/lib/socket';
+// Lazy import so socket.io-client is excluded from the login-page bundle
+// and only loaded after a successful authentication.
+const loadSocket = () => import('@/lib/socket');
 
 interface AuthState {
   user: User | null;
@@ -44,7 +46,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           const payload = 'data' in loginResponse ? loginResponse.data : loginResponse;
           const { access_token, refresh_token, user } = payload;
           apiClient.setTokens(access_token, refresh_token);
-          connectSocket(access_token);
+          loadSocket().then(({ connectSocket }) => connectSocket(access_token));
 
           set({ user, isAuthenticated: true, isLoading: false });
         } catch (err: unknown) {
@@ -74,7 +76,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
 
       logout: () => {
         apiClient.clearTokens();
-        disconnectSocket();
+        loadSocket().then(({ disconnectSocket }) => disconnectSocket());
         set({ user: null, isAuthenticated: false, error: null });
       },
 

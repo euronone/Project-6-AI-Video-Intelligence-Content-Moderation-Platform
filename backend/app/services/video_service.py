@@ -58,6 +58,13 @@ def _build_video_response(video: Video, storage: StorageService | None = None) -
         except Exception:
             _s3_url = None
 
+    _thumbnail_url: str | None = None
+    if storage and video.thumbnail_s3_key:
+        try:
+            _thumbnail_url = storage.presigned_get_url(video.thumbnail_s3_key)
+        except Exception:
+            _thumbnail_url = None
+
     return VideoResponse(
         id=video.id,
         title=video.title,
@@ -66,6 +73,8 @@ def _build_video_response(video: Video, storage: StorageService | None = None) -
         source=video.source,
         s3_key=video.s3_key,
         thumbnail_s3_key=video.thumbnail_s3_key,
+        thumbnail_url=_thumbnail_url,
+        playback_url=_s3_url,
         duration_seconds=video.duration_seconds,
         file_size_bytes=video.file_size_bytes,
         content_type=video.content_type,
@@ -131,7 +140,9 @@ class VideoService:
         videos = result.scalars().all()
 
         return PaginatedVideos(
-            items=[_build_video_response(v, self._storage) for v in videos],
+            # Skip presigned URL generation in list view — callers that need
+            # playback/thumbnail URLs should fetch the detail endpoint instead.
+            items=[_build_video_response(v) for v in videos],
             total=total,
             page=page,
             page_size=page_size,

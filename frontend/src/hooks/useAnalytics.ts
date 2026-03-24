@@ -19,7 +19,6 @@ export function useAnalyticsSummary(params: AnalyticsParams = {}) {
     queryKey: analyticsKeys.summary(params),
     queryFn: () =>
       apiClient.get<AnalyticsSummaryResponse>('/analytics/summary', { params }),
-    select: (res) => res.data,
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -29,7 +28,6 @@ export function useViolationsData(params: ViolationsParams = {}) {
     queryKey: analyticsKeys.violations(params),
     queryFn: () =>
       apiClient.get<ViolationsResponse>('/analytics/violations', { params }),
-    select: (res) => res.data,
     staleTime: 5 * 60 * 1000,
   });
 }

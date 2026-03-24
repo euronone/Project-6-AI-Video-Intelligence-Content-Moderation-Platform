@@ -24,6 +24,7 @@ export function useVideoList(params: VideoListParams = {}) {
   return useQuery({
     queryKey: videoKeys.list(params),
     queryFn: () => apiClient.get<VideoListResponse>('/videos', { params }),
+    staleTime: 60_000,
   });
 }
 
