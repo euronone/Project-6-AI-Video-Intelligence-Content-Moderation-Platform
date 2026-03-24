@@ -22,6 +22,8 @@ from app.models.moderation import (
     ModerationStatus,
     ReviewAction,
 )
+from app.models.user import UserRole
+from app.models.video import Video
 from app.schemas.moderation import (
     ModerationQueueItemResponse,
     ModerationResultResponse,
@@ -54,6 +56,13 @@ async def list_queue(
         base_query = base_query.where(ModerationQueueItem.tenant_id == current_user.tenant_id)
     if status_filter:
         base_query = base_query.where(ModerationQueueItem.status == status_filter)
+    # Non-admin users only see queue items for their own videos
+    if current_user.role != UserRole.ADMIN:
+        base_query = base_query.where(
+            ModerationQueueItem.video_id.in_(
+                select(Video.id).where(Video.owner_id == current_user.id)
+            )
+        )
 
     count_result = await db.execute(select(func.count()).select_from(base_query.subquery()))
     total = count_result.scalar_one()
@@ -67,8 +76,24 @@ async def list_queue(
     )
     items = result.scalars().all()
 
-    return PaginatedQueue(
-        items=[
+    # Batch-load related ModerationResult rows
+    result_ids = [i.moderation_result_id for i in items if i.moderation_result_id]
+    video_ids = [i.video_id for i in items]
+
+    mod_results: dict = {}
+    if result_ids:
+        mr = await db.execute(select(ModerationResult).where(ModerationResult.id.in_(result_ids)))
+        mod_results = {r.id: r for r in mr.scalars().all()}
+
+    video_titles: dict = {}
+    if video_ids:
+        vr = await db.execute(select(Video).where(Video.id.in_(video_ids)))
+        video_titles = {v.id: v.title for v in vr.scalars().all()}
+
+    response_items = []
+    for item in items:
+        mr = mod_results.get(item.moderation_result_id) if item.moderation_result_id else None
+        response_items.append(
             ModerationQueueItemResponse(
                 id=item.id,
                 video_id=item.video_id,
@@ -78,9 +103,17 @@ async def list_queue(
                 assigned_to=item.assigned_to,
                 tenant_id=item.tenant_id,
                 created_at=item.created_at,
+                video_title=video_titles.get(item.video_id),
+                # Justification fields from ModerationResult
+                ai_summary=mr.summary if mr else None,
+                overall_confidence=mr.overall_confidence if mr else None,
+                violations=mr.violations if mr else [],
+                ai_model=mr.ai_model if mr else None,
             )
-            for item in items
-        ],
+        )
+
+    return PaginatedQueue(
+        items=response_items,
         total=total,
         page=page,
         page_size=page_size,

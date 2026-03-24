@@ -80,7 +80,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
+    command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2 --queues video,moderation,analytics,cleanup
 
   # ── Frontend ───────────────────────────────────────────────────────────────
   frontend:

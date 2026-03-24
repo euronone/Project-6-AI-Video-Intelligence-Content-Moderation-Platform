@@ -91,13 +91,14 @@ class ReportGeneratorAgent(BaseAgent):
         response = await self.client.chat.completions.create(
             model=_MODEL,
             max_tokens=512,
+            response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": REPORT_SYSTEM},
                 {"role": "user", "content": user_prompt},
             ],
         )
 
-        raw = response.choices[0].message.content or "{}"
+        raw = self._extract_json(response.choices[0].message.content)
         data = json.loads(raw)
 
         violations = [Violation(**v) for v in safety_result.get("violations", [])]
@@ -109,9 +110,10 @@ class ReportGeneratorAgent(BaseAgent):
             confidence=float(data.get("confidence", 0.5)),
             violations=violations,
             content_summary=data.get("content_summary", content_analysis.get("summary", "")),
+            reasoning=safety_result.get("reasoning", ""),
             metadata=metadata,
             scene_summary=scene_summary,
-            policy_triggers=data.get("policy_triggers", []),
+            policy_triggers=safety_result.get("policy_triggers", data.get("policy_triggers", [])),
             transcript_excerpt=data.get("transcript_excerpt", ""),
             processing_errors=[],
             agents_completed=[],

@@ -34,9 +34,9 @@ export default function ModerationQueuePage() {
       <div className="flex flex-1 flex-col space-y-6 overflow-hidden">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Moderation Queue</h1>
+            <h1 className="text-3xl font-bold tracking-tight">AI Moderation Decisions</h1>
             <p className="text-muted-foreground">
-              {data ? `${data.total} item${data.total !== 1 ? 's' : ''}` : 'Loading…'}
+              Autonomous AI decisions — {data ? `${data.total} video${data.total !== 1 ? 's' : ''} processed` : 'Loading…'}
             </p>
           </div>
           <Button variant="outline" size="icon" onClick={() => refetch()} disabled={isFetching} aria-label="Refresh">
@@ -56,11 +56,10 @@ export default function ModerationQueuePage() {
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="in_review">In Review</SelectItem>
+            <SelectItem value="all">All decisions</SelectItem>
             <SelectItem value="approved">Approved</SelectItem>
             <SelectItem value="rejected">Rejected</SelectItem>
+            <SelectItem value="flagged">Flagged</SelectItem>
             <SelectItem value="escalated">Escalated</SelectItem>
           </SelectContent>
         </Select>
@@ -96,7 +95,7 @@ export default function ModerationQueuePage() {
                 {data?.items.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      No items in queue.
+                      No AI decisions recorded yet. Upload a video to begin.
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -109,7 +108,9 @@ export default function ModerationQueuePage() {
                         selectQueueItem(selectedQueueItemId === item.id ? null : item.id)
                       }
                     >
-                      <TableCell className="font-mono text-xs">{item.id.slice(0, 8)}…</TableCell>
+                      <TableCell className="max-w-[180px] truncate">
+                        {item.video_title ?? <span className="font-mono text-xs">{item.id.slice(0, 8)}…</span>}
+                      </TableCell>
                       <TableCell className="capitalize">
                         {item.video_id ? 'Video' : 'Stream'}
                       </TableCell>
@@ -117,7 +118,7 @@ export default function ModerationQueuePage() {
                         <ModerationBadge status={item.status} />
                       </TableCell>
                       <TableCell>{item.priority}</TableCell>
-                      <TableCell>{item.report?.violations?.length ?? 0}</TableCell>
+                      <TableCell>{item.violations?.length ?? item.report?.violations?.length ?? 0}</TableCell>
                       <TableCell className="text-muted-foreground text-xs">
                         {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
                       </TableCell>

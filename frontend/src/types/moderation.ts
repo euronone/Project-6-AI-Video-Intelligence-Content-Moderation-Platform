@@ -3,7 +3,8 @@ export type ModerationStatus =
   | 'in_review'
   | 'approved'
   | 'rejected'
-  | 'escalated';
+  | 'escalated'
+  | 'flagged';
 
 export type ViolationCategory =
   | 'violence'
@@ -36,18 +37,35 @@ export interface ModerationReport {
   processed_at: string;
 }
 
+// Per-violation finding from the AI pipeline
+export interface AiViolation {
+  category: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  confidence: number;
+  timestamp: number;
+  description: string;
+  frame_index?: number;
+}
+
 export interface ModerationQueueItem {
   id: string;
   video_id?: string;
   stream_id?: string;
+  moderation_result_id?: string;
   status: ModerationStatus;
   priority: number;
-  report?: ModerationReport;
+  report?: ModerationReport; // legacy field
   reviewed_by?: string;
   reviewed_at?: string;
   review_notes?: string;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
+  // Joined from ModerationResult — AI justification
+  video_title?: string;
+  ai_summary?: string;
+  overall_confidence?: number;
+  violations?: AiViolation[];
+  ai_model?: string;
 }
 
 export interface ModerationQueueResponse {

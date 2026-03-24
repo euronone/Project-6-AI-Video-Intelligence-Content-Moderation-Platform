@@ -44,7 +44,7 @@ export function useSubmitReview() {
 
   return useMutation({
     mutationFn: ({ id, body }: { id: string; body: SubmitReviewRequest }) =>
-      apiClient.post(`/moderation/queue/${id}/review`, body),
+      apiClient.post(`/moderation/${id}/review`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['moderation', 'queue'] });
       toast.success('Review submitted');

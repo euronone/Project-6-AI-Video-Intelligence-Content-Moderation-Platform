@@ -310,8 +310,95 @@ def dispatch_webhooks_task(
     return {"delivered": delivered, "failed": failed, "skipped": skipped}
 
 
-# ── W-03-D: Enqueue human review ──────────────────────────────────────────────
+# ── W-03-D: Record autonomous AI decision in the audit queue ──────────────────
 
+
+@shared_task(
+    bind=True,
+    name="app.workers.moderation_tasks.record_moderation_decision_task",
+    max_retries=3,
+    default_retry_delay=30,
+)
+def record_moderation_decision_task(
+    self,
+    video_id: str,
+    moderation_result_id: str | None = None,
+    final_status: str = "approved",
+    priority: int = 0,
+    tenant_id: str | None = None,
+) -> dict[str, Any]:
+    """
+    Write the AI's final autonomous decision to the moderation queue as an
+    audit log entry.  The decision is already final — this is NOT a pending
+    human-approval gate.
+
+    Operators see every AI decision here and may use the override endpoint
+    for exceptional corrections, but no human action is required for normal
+    operation.
+
+    Idempotent — if an entry already exists for this video it is updated in place.
+
+    Args:
+        video_id:             UUID string of the processed video.
+        moderation_result_id: UUID string of the related ModerationResult.
+        final_status:         The autonomous status string ("approved", "rejected", "flagged").
+        priority:             Display priority (2=rejected, 1=flagged, 0=approved).
+        tenant_id:            Tenant scope.
+
+    Returns:
+        {"queue_item_id": str, "created": bool}
+    """
+    logger.info(
+        "record_moderation_decision_start",
+        video_id=video_id,
+        final_status=final_status,
+    )
+
+    try:
+        status_enum = ModerationStatus(final_status)
+    except ValueError:
+        status_enum = ModerationStatus.APPROVED
+
+    try:
+        with sync_session() as db:
+            existing = (
+                db.query(ModerationQueueItem)
+                .filter(ModerationQueueItem.video_id == uuid.UUID(video_id))
+                .first()
+            )
+
+            if existing:
+                existing.status = status_enum
+                existing.priority = priority
+                existing.moderation_result_id = (
+                    uuid.UUID(moderation_result_id) if moderation_result_id else existing.moderation_result_id
+                )
+                item_id = str(existing.id)
+                logger.info("record_moderation_decision_updated", queue_item_id=item_id)
+                return {"queue_item_id": item_id, "created": False}
+
+            item = ModerationQueueItem(
+                video_id=uuid.UUID(video_id),
+                moderation_result_id=(
+                    uuid.UUID(moderation_result_id) if moderation_result_id else None
+                ),
+                status=status_enum,
+                priority=priority,
+                tenant_id=tenant_id,
+            )
+            db.add(item)
+            db.flush()
+            item_id = str(item.id)
+
+        logger.info("record_moderation_decision_done", queue_item_id=item_id, final_status=final_status)
+        return {"queue_item_id": item_id, "created": True}
+
+    except Exception as exc:
+        logger.error("record_moderation_decision_error", video_id=video_id, error=str(exc))
+        raise self.retry(exc=exc) from exc
+
+
+# ── Kept for backward compatibility (live-stream segments, re-runs) ────────────
 
 @shared_task(
     bind=True,
@@ -326,57 +413,13 @@ def enqueue_human_review_task(
     priority: int = 0,
     tenant_id: str | None = None,
 ) -> dict[str, Any]:
-    """
-    Insert a ModerationQueueItem so a human reviewer can inspect the video.
-    Idempotent — if a pending/in-review item already exists, it is returned.
-
-    Args:
-        video_id:             UUID string of the video requiring review.
-        moderation_result_id: UUID string of the related ModerationResult (optional).
-        priority:             Integer priority (higher = more urgent).
-        tenant_id:            Tenant scope.
-
-    Returns:
-        {"queue_item_id": str, "created": bool}
-    """
-    logger.info("enqueue_human_review_task_start", video_id=video_id)
-
-    try:
-        with sync_session() as db:
-            existing = (
-                db.query(ModerationQueueItem)
-                .filter(
-                    ModerationQueueItem.video_id == uuid.UUID(video_id),
-                    ModerationQueueItem.status.in_(
-                        [ModerationStatus.PENDING, ModerationStatus.FLAGGED]
-                    ),
-                )
-                .first()
-            )
-
-            if existing:
-                logger.info(
-                    "enqueue_human_review_task_already_exists",
-                    queue_item_id=str(existing.id),
-                )
-                return {"queue_item_id": str(existing.id), "created": False}
-
-            item = ModerationQueueItem(
-                video_id=uuid.UUID(video_id),
-                moderation_result_id=(
-                    uuid.UUID(moderation_result_id) if moderation_result_id else None
-                ),
-                status=ModerationStatus.PENDING,
-                priority=priority,
-                tenant_id=tenant_id,
-            )
-            db.add(item)
-            db.flush()
-            item_id = str(item.id)
-
-        logger.info("enqueue_human_review_task_done", queue_item_id=item_id)
-        return {"queue_item_id": item_id, "created": True}
-
-    except Exception as exc:
-        logger.error("enqueue_human_review_task_error", video_id=video_id, error=str(exc))
-        raise self.retry(exc=exc) from exc
+    """Delegates to record_moderation_decision_task with FLAGGED status."""
+    return record_moderation_decision_task.apply(
+        kwargs=dict(
+            video_id=video_id,
+            moderation_result_id=moderation_result_id,
+            final_status=ModerationStatus.FLAGGED.value,
+            priority=priority,
+            tenant_id=tenant_id,
+        )
+    ).get()

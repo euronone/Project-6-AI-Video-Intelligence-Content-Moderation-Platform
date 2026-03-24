@@ -60,6 +60,7 @@ export const MODERATION_STATUS_LABELS: Record<string, string> = {
   approved: 'Approved',
   rejected: 'Rejected',
   escalated: 'Escalated',
+  flagged: 'Flagged',
 };
 
 export const VIDEO_STATUS_LABELS: Record<string, string> = {
