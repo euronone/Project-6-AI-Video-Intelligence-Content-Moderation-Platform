@@ -73,3 +73,14 @@ class PaginatedVideos(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class DuplicateCheckItem(BaseModel):
+    filename: str
+    file_size_bytes: int
+
+
+class DuplicateCheckResult(BaseModel):
+    filename: str
+    file_size_bytes: int
+    exists: bool
