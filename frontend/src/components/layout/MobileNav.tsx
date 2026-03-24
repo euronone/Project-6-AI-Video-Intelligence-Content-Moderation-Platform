@@ -13,23 +13,26 @@ import {
   Shield,
   ShieldAlert,
   Upload,
+  Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/lib/constants';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const navItems = [
-  { label: 'Dashboard', href: ROUTES.dashboard, icon: LayoutDashboard },
-  { label: 'Videos', href: ROUTES.videos, icon: Film },
-  { label: 'Upload', href: ROUTES.videoUpload, icon: Upload },
-  { label: 'Moderation Queue', href: ROUTES.moderationQueue, icon: ShieldAlert },
-  { label: 'Policies', href: ROUTES.moderationPolicies, icon: Shield },
-  { label: 'Live Streams', href: ROUTES.live, icon: Radio },
-  { label: 'Analytics', href: ROUTES.analytics, icon: BarChart3 },
-  { label: 'Settings', href: ROUTES.settings, icon: Settings },
+  { label: 'Dashboard', href: ROUTES.dashboard, icon: LayoutDashboard, adminOnly: false },
+  { label: 'Videos', href: ROUTES.videos, icon: Film, adminOnly: false },
+  { label: 'Upload', href: ROUTES.videoUpload, icon: Upload, adminOnly: false },
+  { label: 'Moderation Queue', href: ROUTES.moderationQueue, icon: ShieldAlert, adminOnly: false },
+  { label: 'Policies', href: ROUTES.moderationPolicies, icon: Shield, adminOnly: false },
+  { label: 'Live Streams', href: ROUTES.live, icon: Radio, adminOnly: false },
+  { label: 'Analytics', href: ROUTES.analytics, icon: BarChart3, adminOnly: false },
+  { label: 'User Management', href: ROUTES.userManagement, icon: Users, adminOnly: true },
+  { label: 'Settings', href: ROUTES.settings, icon: Settings, adminOnly: false },
 ];
 
 interface MobileLinkProps extends LinkProps {
@@ -58,6 +61,8 @@ function MobileLink({ href, onOpenChange, children, className, ...props }: Mobil
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const { isAdmin } = useAuth();
+  const visibleItems = navItems.filter((item) => !item.adminOnly || isAdmin);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -78,7 +83,7 @@ export function MobileNav() {
         <ScrollArea className="flex-1 px-3 py-4 h-[calc(100vh-5rem)]">
           <nav aria-label="Mobile navigation">
             <ul className="space-y-1">
-              {navItems.map((item) => (
+              {visibleItems.map((item) => (
                 <li key={item.href}>
                   <MobileLink
                     href={item.href}

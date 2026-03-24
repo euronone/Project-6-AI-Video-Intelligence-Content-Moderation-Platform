@@ -20,6 +20,7 @@ export const ROUTES = {
   analytics: '/dashboard/analytics',
   settings: '/dashboard/settings',
   profile: '/dashboard/profile',
+  userManagement: '/dashboard/users',
   videos: '/videos',
   videoUpload: '/videos/upload',
   videoDetail: (id: string) => `/videos/${id}`,
