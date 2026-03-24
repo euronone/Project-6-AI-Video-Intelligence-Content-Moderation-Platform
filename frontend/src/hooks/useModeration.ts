@@ -116,3 +116,18 @@ export function useDeletePolicy() {
     },
   });
 }
+
+export function useTogglePolicy() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiClient.patch<PolicyResponse>(`/policies/${id}/toggle`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: moderationKeys.policies });
+    },
+    onError: () => {
+      toast.error('Failed to toggle policy');
+    },
+  });
+}
