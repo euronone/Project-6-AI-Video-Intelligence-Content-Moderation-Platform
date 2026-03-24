@@ -36,18 +36,20 @@ const policySchema = z.object({
   rules: z.array(ruleSchema),
   default_action: z.enum(['block', 'flag', 'allow']),
   is_active: z.boolean(),
+  is_default: z.boolean(),
 });
 
 type PolicyFormValues = z.infer<typeof policySchema>;
 
 interface PolicyEditorProps {
   policy?: Policy;
+  isAdmin?: boolean;
   onSubmit: (values: PolicyFormValues) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
 }
 
-export function PolicyEditor({ policy, onSubmit, onCancel, isSubmitting }: PolicyEditorProps) {
+export function PolicyEditor({ policy, isAdmin = false, onSubmit, onCancel, isSubmitting }: PolicyEditorProps) {
   const {
     register,
     handleSubmit,
@@ -62,6 +64,7 @@ export function PolicyEditor({ policy, onSubmit, onCancel, isSubmitting }: Polic
           rules: (policy.rules ?? []) as PolicyFormValues['rules'],
           default_action: (policy.default_action ?? 'flag') as PolicyAction,
           is_active: policy.is_active,
+          is_default: policy.is_default,
         }
       : {
           name: '',
@@ -69,6 +72,7 @@ export function PolicyEditor({ policy, onSubmit, onCancel, isSubmitting }: Polic
           rules: [],
           default_action: 'flag',
           is_active: true,
+          is_default: false,
         },
   });
 
@@ -228,6 +232,26 @@ export function PolicyEditor({ policy, onSubmit, onCancel, isSubmitting }: Polic
           )}
         />
       </div>
+
+      {/* Default policy toggle — admin only */}
+      {isAdmin && (
+        <div className="flex items-center justify-between rounded-md border border-dashed p-3">
+          <div>
+            <p className="text-sm font-medium">Default policy</p>
+            <p className="text-xs text-muted-foreground">
+              Default policies are visible to all users and applied as a
+              fallback when no custom policy exists
+            </p>
+          </div>
+          <Controller
+            control={control}
+            name="is_default"
+            render={({ field }) => (
+              <Switch checked={field.value} onCheckedChange={field.onChange} />
+            )}
+          />
+        </div>
+      )}
 
       {/* Submit */}
       <div className="flex justify-end gap-2">

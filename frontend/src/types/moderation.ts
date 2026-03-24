@@ -51,17 +51,13 @@ export interface ModerationQueueItem {
 }
 
 export interface ModerationQueueResponse {
-  data: {
-    items: ModerationQueueItem[];
-    total: number;
-    page: number;
-    page_size: number;
-  };
+  items: ModerationQueueItem[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 
-export interface ModerationResultResponse {
-  data: ModerationQueueItem;
-}
+export type ModerationResultResponse = ModerationQueueItem;
 
 export interface SubmitReviewRequest {
   action: ReviewAction;
@@ -89,15 +85,11 @@ export interface Policy {
 }
 
 export interface PolicyListResponse {
-  data: {
-    items: Policy[];
-    total: number;
-  };
+  items: Policy[];
+  total: number;
 }
 
-export interface PolicyResponse {
-  data: Policy;
-}
+export type PolicyResponse = Policy;
 
 export interface CreatePolicyRequest {
   name: string;
