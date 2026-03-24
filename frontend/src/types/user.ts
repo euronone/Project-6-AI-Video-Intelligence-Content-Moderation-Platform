@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'operator';
+export type UserRole = 'admin' | 'operator' | 'api_consumer';
 
 export interface User {
   id: string;
@@ -6,6 +6,18 @@ export interface User {
   name: string;
   role: UserRole;
   organization_id?: string;
+  whatsapp_number?: string | null;
+  is_active: boolean;
+  is_blocked: boolean;
+  blocked_at?: string | null;
+  blocked_reason?: string | null;
+  // Address
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postal_code?: string | null;
+  country?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -26,7 +38,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   name: string;
-  role: UserRole;
+  whatsapp_number?: string;
 }
 
 export interface LoginResponse {
