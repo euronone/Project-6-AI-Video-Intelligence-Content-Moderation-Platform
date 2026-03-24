@@ -75,6 +75,15 @@ class PaginatedVideos(BaseModel):
     page_size: int
 
 
+class BulkDeleteRequest(BaseModel):
+    video_ids: list[uuid.UUID]
+
+
+class BulkDeleteResponse(BaseModel):
+    deleted: int
+    skipped: int  # not owned, not found, or already deleted
+
+
 class DuplicateCheckItem(BaseModel):
     filename: str
     file_size_bytes: int

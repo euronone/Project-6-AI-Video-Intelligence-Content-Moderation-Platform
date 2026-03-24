@@ -23,6 +23,8 @@ from app.models.moderation import ModerationQueueItem
 from app.models.policy import Policy
 from app.models.video import Video, VideoStatus
 from app.schemas.video import (
+    BulkDeleteRequest,
+    BulkDeleteResponse,
     DuplicateCheckItem,
     DuplicateCheckResult,
     PaginatedVideos,
@@ -300,6 +302,55 @@ async def update_video(
 
     logger.info("video_updated", video_id=str(video_id))
     return _build_video_response(video, storage)
+
+
+# ── POST /videos/bulk-delete ──────────────────────────────────────────────────
+
+
+@router.post(
+    "/bulk-delete",
+    response_model=BulkDeleteResponse,
+    summary="Delete video files for multiple videos, preserving metadata and thumbnails",
+)
+async def bulk_delete_videos(
+    body: BulkDeleteRequest,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    storage: Annotated[StorageService, Depends(get_storage_service)],
+) -> BulkDeleteResponse:
+    deleted = 0
+    skipped = 0
+    now = datetime.now(UTC).isoformat()
+
+    for video_id in body.video_ids:
+        result = await db.execute(
+            select(Video).where(Video.id == video_id, Video.deleted_at.is_(None))
+        )
+        video = result.scalar_one_or_none()
+
+        if not video or video.owner_id != current_user.id:
+            skipped += 1
+            continue
+
+        # Delete the video file from S3 — thumbnail is intentionally kept
+        if video.s3_key:
+            with suppress(Exception):
+                storage.delete_object(video.s3_key)
+
+        video.s3_key = None
+        video.deleted_at = now
+        video.status = VideoStatus.DELETED
+
+        # Remove pending queue entries
+        await db.execute(
+            sql_delete(ModerationQueueItem).where(ModerationQueueItem.video_id == video_id)
+        )
+
+        deleted += 1
+        logger.info("video_bulk_deleted", video_id=str(video_id), user_id=str(current_user.id))
+
+    await db.commit()
+    return BulkDeleteResponse(deleted=deleted, skipped=skipped)
 
 
 # ── DELETE /videos/{id} ───────────────────────────────────────────────────────
