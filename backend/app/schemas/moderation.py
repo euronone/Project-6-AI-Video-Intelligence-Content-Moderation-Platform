@@ -50,10 +50,14 @@ class ModerationQueueItemResponse(BaseModel):
     tenant_id: str | None
     created_at: datetime
 
-    # Joined from related tables
+    # Joined from Video
     video_title: str | None = None
-    violations_count: int = 0
-    top_violation_category: ViolationCategory | None = None
+
+    # Joined from ModerationResult — AI justification
+    ai_summary: str | None = None          # content summary + reasoning + policy triggers
+    overall_confidence: float | None = None
+    violations: list[dict[str, Any]] = []  # each has category, severity, description, confidence
+    ai_model: str | None = None
 
 
 class SubmitReviewRequest(BaseModel):

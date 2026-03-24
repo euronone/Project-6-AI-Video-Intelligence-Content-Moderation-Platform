@@ -8,6 +8,7 @@ const variantMap: Record<ModerationStatus, BadgeProps['variant']> = {
   approved: 'success',
   rejected: 'destructive',
   escalated: 'warning',
+  flagged: 'warning',
 };
 
 interface ModerationBadgeProps {

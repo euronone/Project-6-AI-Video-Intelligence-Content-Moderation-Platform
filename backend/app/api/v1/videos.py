@@ -10,13 +10,16 @@ from typing import Annotated
 
 import structlog
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import delete as sql_delete
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, OperatorUser
 from app.config import settings
 from app.core.exceptions import ForbiddenError, NotFoundError
 from app.dependencies import get_db
+from app.models.moderation import ModerationQueueItem
+from app.models.policy import Policy
 from app.models.video import Video, VideoStatus
 from app.schemas.video import (
     PaginatedVideos,
@@ -158,8 +161,24 @@ async def create_video(
     db.add(video)
     await db.flush()
 
-    # Stub: enqueue Celery task once worker is wired
-    # video_tasks.process_video.delay(str(video.id))
+    # Fetch active policy rules for this user (defaults + their own active policies)
+    policy_result = await db.execute(
+        select(Policy).where(
+            Policy.is_active.is_(True),
+            or_(Policy.is_default.is_(True), Policy.owner_id == current_user.id),
+        )
+    )
+    active_policies = policy_result.scalars().all()
+    policy_rules: list[dict] = []
+    for p in active_policies:
+        if p.rules:
+            policy_rules.extend(p.rules)
+
+    # Enqueue the full processing + moderation pipeline
+    from app.workers.video_tasks import process_video
+
+    process_video.delay(str(video.id), body.s3_key, policy_rules)
+
     logger.info("video_registered", video_id=str(video.id), user_id=str(current_user.id))
     return _build_video_response(video)
 
@@ -253,5 +272,11 @@ async def delete_video(
 
     video.deleted_at = datetime.now(UTC).isoformat()
     video.status = VideoStatus.DELETED
+
+    # Remove any pending queue entries for this video (deleted mid-process or after moderation)
+    await db.execute(
+        sql_delete(ModerationQueueItem).where(ModerationQueueItem.video_id == video_id)
+    )
+
     # Stub: enqueue S3 cleanup — cleanup_tasks.delete_video_artifacts.delay(str(video_id))
     logger.info("video_soft_deleted", video_id=str(video_id))

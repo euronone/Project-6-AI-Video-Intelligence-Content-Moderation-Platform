@@ -78,6 +78,18 @@ class BaseAgent:
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
+    @staticmethod
+    def _extract_json(raw: str | None) -> str:
+        """Strip markdown code fences and whitespace so json.loads never fails on formatting."""
+        text = (raw or "").strip()
+        # Remove ```json ... ``` or ``` ... ``` wrappers that gpt-4o sometimes adds
+        if text.startswith("```"):
+            lines = text.splitlines()
+            # Drop first line (```json or ```) and last ``` line
+            inner = [l for l in lines[1:] if l.strip() != "```"]
+            text = "\n".join(inner).strip()
+        return text or "{}"
+
     def _mark_completed(self, state: dict[str, Any]) -> list[str]:
         # With operator.add reducer, return only the NEW item to append
         return [self.name]

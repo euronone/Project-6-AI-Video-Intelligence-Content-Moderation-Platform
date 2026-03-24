@@ -88,7 +88,7 @@ class ContentAnalyzerAgent(BaseAgent):
             ],
         )
 
-        raw = response.choices[0].message.content or "{}"
+        raw = self._extract_json(response.choices[0].message.content)
         data = json.loads(raw)
 
         return ContentAnalysisResult(

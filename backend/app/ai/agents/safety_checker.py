@@ -145,13 +145,14 @@ class SafetyCheckerAgent(BaseAgent):
         response = await self.client.chat.completions.create(
             model=_MODEL,
             max_tokens=1024,
+            response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": SAFETY_CHECK_SYSTEM},
                 {"role": "user", "content": user_prompt},
             ],
         )
 
-        raw = response.choices[0].message.content or "{}"
+        raw = self._extract_json(response.choices[0].message.content)
         data = json.loads(raw)
 
         violations = [

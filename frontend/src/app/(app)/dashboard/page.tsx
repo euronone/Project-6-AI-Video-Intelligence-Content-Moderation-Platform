@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { format, subDays } from 'date-fns';
-import { Film, ShieldAlert, CheckCircle, Activity, ArrowRight } from 'lucide-react';
+import { Film, ShieldAlert, CheckCircle, Activity, ArrowRight, Users } from 'lucide-react';
 import { StatCard } from '@/components/analytics/StatCard';
 import { ModerationBadge } from '@/components/moderation/ModerationBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,44 +33,53 @@ const HeatmapOverlay = dynamic(
   { ssr: false }
 );
 
-const from = format(subDays(new Date(), 30), 'yyyy-MM-dd');
-const to = format(new Date(), 'yyyy-MM-dd');
+const today = format(new Date(), 'yyyy-MM-dd');
+// Admin: all historical data; user: last 90 days
+const ADMIN_FROM = '2000-01-01';
+const USER_FROM = format(subDays(new Date(), 90), 'yyyy-MM-dd');
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
-  const { data: summary, isLoading: summaryLoading } = useAnalyticsSummary({ from, to });
-  const { data: violations, isLoading: violationsLoading } = useViolationsData({ from, to });
-  const { data: queue, isLoading: queueLoading } = useModerationQueue({ page_size: 5, status: 'pending' });
+  const analyticsFrom = isAdmin ? ADMIN_FROM : USER_FROM;
+
+  const { data: summary, isLoading: summaryLoading } = useAnalyticsSummary({ from: analyticsFrom, to: today });
+  const { data: violations, isLoading: violationsLoading } = useViolationsData({ from: analyticsFrom, to: today });
+  // Admin sees all queue items; non-admin sees only their own (enforced on backend)
+  const { data: queue, isLoading: queueLoading } = useModerationQueue({ page_size: 5 });
   const { data: videos, isLoading: videosLoading } = useVideoList({ page_size: 1 });
 
   const greeting = user?.name ? `Welcome back, ${user.name.split(' ')[0]}` : 'Dashboard';
+  const overviewLabel = isAdmin
+    ? 'System-wide overview — all time'
+    : 'Your content overview — last 90 days';
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{greeting}</h1>
-        <p className="text-muted-foreground">
-          Platform overview — last 30 days
-        </p>
+        <p className="text-muted-foreground">{overviewLabel}</p>
       </div>
 
       {/* Stat cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Total Videos"
-          value={videosLoading ? '—' : (videos?.total ?? 0)}
-          icon={Film}
-          isLoading={videosLoading}
-          description="All ingested videos"
+          title={isAdmin ? 'Total Videos Processed' : 'Your Videos'}
+          value={isAdmin
+            ? (summaryLoading ? '—' : (summary?.total_videos_processed ?? 0))
+            : (videosLoading ? '—' : (videos?.total ?? 0))}
+          icon={isAdmin ? Users : Film}
+          isLoading={isAdmin ? summaryLoading : videosLoading}
+          description={isAdmin ? 'Across all users' : 'Videos you have uploaded'}
         />
         <StatCard
-          title="Pending Review"
+          title="AI Decisions"
           value={queueLoading ? '—' : (queue?.total ?? 0)}
           icon={ShieldAlert}
           isLoading={queueLoading}
-          description="Items awaiting moderation"
+          description={isAdmin ? 'Total moderation decisions' : 'Decisions on your content'}
         />
         <StatCard
           title="Violation Rate"
@@ -97,7 +106,7 @@ export default function DashboardPage() {
         <InsightChart
           data={violations?.time_series}
           isLoading={violationsLoading}
-          title="Violations over time (30d)"
+          title={isAdmin ? 'Violations over time (all time)' : 'Violations over time (90d)'}
         />
         <HeatmapOverlay
           data={violations?.breakdown}
@@ -105,10 +114,12 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Recent pending queue */}
+      {/* Recent AI decisions */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-          <CardTitle className="text-base">Recent Pending Reviews</CardTitle>
+          <CardTitle className="text-base">
+            {isAdmin ? 'Recent AI Moderation Decisions' : 'Recent Decisions on Your Content'}
+          </CardTitle>
           <Button variant="ghost" size="sm" asChild>
             <Link href={ROUTES.moderationQueue} className="flex items-center gap-1">
               View all <ArrowRight className="h-3.5 w-3.5" />
@@ -123,7 +134,7 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : !queue?.items?.length ? (
-            <p className="text-sm text-muted-foreground">No pending items — queue is clear.</p>
+            <p className="text-sm text-muted-foreground">No moderation decisions yet.</p>
           ) : (
             <div className="divide-y">
               {queue.items.map((item) => (
@@ -133,11 +144,10 @@ export default function DashboardPage() {
                 >
                   <div className="flex flex-col gap-0.5">
                     <span className="font-medium text-foreground">
-                      {item.video_id
-                        ? `Video ${item.video_id.slice(0, 8)}…`
-                        : item.stream_id
-                        ? `Stream ${item.stream_id.slice(0, 8)}…`
-                        : item.id.slice(0, 8)}
+                      {item.video_title
+                        ?? (item.video_id
+                          ? `Video ${item.video_id.slice(0, 8)}…`
+                          : item.id.slice(0, 8))}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {format(new Date(item.created_at), 'MMM d, HH:mm')}

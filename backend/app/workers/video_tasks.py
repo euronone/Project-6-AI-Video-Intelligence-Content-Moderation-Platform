@@ -35,6 +35,7 @@ from app.ai.graphs.video_analysis_graph import run_video_analysis
 from app.ai.tools.audio_transcriber import transcribe_audio
 from app.ai.tools.frame_extractor import FrameExtractionError, extract_frames
 from app.config import settings
+from app.models.analytics import AnalyticsEvent, EventType
 from app.models.moderation import ModerationResult, ModerationStatus
 from app.models.video import Video, VideoStatus
 from app.workers.celery_app import sync_session
@@ -272,14 +273,17 @@ def run_analysis_pipeline_task(
         _set_video_status(video_id, VideoStatus.FAILED, error=str(exc))
         raise self.retry(exc=exc) from exc
 
-    # Map AI decision to DB status
+    # Map AI decision to final autonomous status — no human gate.
+    # ESCALATED = high-confidence violation → auto-reject.
+    # NEEDS_REVIEW = low-confidence → auto-flag (visible in audit log but not blocked).
+    # The queue is an audit log; human override is an optional exception path.
     _DECISION_TO_STATUS: dict[str, ModerationStatus] = {
         "approved": ModerationStatus.APPROVED,
         "rejected": ModerationStatus.REJECTED,
-        "escalated": ModerationStatus.ESCALATED,
-        "needs_review": ModerationStatus.ESCALATED,
+        "escalated": ModerationStatus.REJECTED,   # certain enough violation → auto-reject
+        "needs_review": ModerationStatus.FLAGGED, # uncertain → auto-flag, not blocked
     }
-    mod_status = _DECISION_TO_STATUS.get(report.decision.value, ModerationStatus.PENDING)
+    mod_status = _DECISION_TO_STATUS.get(report.decision.value, ModerationStatus.FLAGGED)
 
     with sync_session() as db:
         existing = (
@@ -287,52 +291,88 @@ def run_analysis_pipeline_task(
             .filter(ModerationResult.video_id == uuid.UUID(video_id))
             .first()
         )
+        # Build full justification: content summary + AI reasoning + policy triggers
+        justification_parts = []
+        if report.content_summary:
+            justification_parts.append(report.content_summary)
+        if report.reasoning:
+            justification_parts.append(f"AI Reasoning: {report.reasoning}")
+        if report.policy_triggers:
+            justification_parts.append(f"Policy Triggers: {', '.join(report.policy_triggers)}")
+        full_summary = "\n\n".join(justification_parts)
+
+        # Violations include per-finding descriptions from the AI
+        violations_data = [v.model_dump() for v in report.violations]
+
         if existing:
             existing.status = mod_status
             existing.overall_confidence = report.confidence
-            existing.violations = [v.model_dump() for v in report.violations]
-            existing.summary = report.content_summary
+            existing.violations = violations_data
+            existing.summary = full_summary
             existing.ai_model = settings.OPENAI_MODEL
             existing.updated_at = datetime.now(UTC)
+            mod_result = existing
         else:
-            db.add(
-                ModerationResult(
-                    video_id=uuid.UUID(video_id),
-                    status=mod_status,
-                    overall_confidence=report.confidence,
-                    violations=[v.model_dump() for v in report.violations],
-                    summary=report.content_summary,
-                    ai_model=settings.OPENAI_MODEL,
-                )
+            mod_result = ModerationResult(
+                video_id=uuid.UUID(video_id),
+                status=mod_status,
+                overall_confidence=report.confidence,
+                violations=violations_data,
+                summary=full_summary,
+                ai_model=settings.OPENAI_MODEL,
             )
+            db.add(mod_result)
+            # Flush immediately so mod_result.id is populated (autoflush=False)
+            db.flush()
 
-        # Mark video as ready
+        # Mark video as ready and capture tenant_id for analytics
         video = db.get(Video, uuid.UUID(video_id))
+        tenant_id: str | None = None
         if video:
             video.status = VideoStatus.READY
             video.updated_at = datetime.now(UTC)
+            tenant_id = video.tenant_id
 
-        # Capture result id for queue enqueue below
-        result_id = str(existing.id) if existing else None
-        if not result_id:
-            # Re-fetch to get the generated id for the newly inserted row
-            new_result = (
-                db.query(ModerationResult)
-                .filter(ModerationResult.video_id == uuid.UUID(video_id))
-                .first()
+        result_id = str(mod_result.id)
+
+        # Record analytics events so stats are populated
+        today_str = datetime.now(UTC).strftime("%Y-%m-%d")
+        db.add(
+            AnalyticsEvent(
+                event_type=EventType.VIDEO_PROCESSED,
+                video_id=uuid.UUID(video_id),
+                tenant_id=tenant_id,
+                event_date=today_str,
             )
-            result_id = str(new_result.id) if new_result else None
-
-    # Enqueue for human review when decision needs escalation or is uncertain
-    _NEEDS_REVIEW = {ModerationStatus.ESCALATED, ModerationStatus.PENDING}
-    if mod_status in _NEEDS_REVIEW:
-        from app.workers.moderation_tasks import enqueue_human_review_task
-
-        enqueue_human_review_task.delay(
-            video_id=video_id,
-            moderation_result_id=result_id,
-            priority=1 if mod_status == ModerationStatus.ESCALATED else 0,
         )
+        for v in report.violations:
+            db.add(
+                AnalyticsEvent(
+                    event_type=EventType.VIOLATION_DETECTED,
+                    video_id=uuid.UUID(video_id),
+                    tenant_id=tenant_id,
+                    category=v.category,
+                    confidence=v.confidence,
+                    event_date=today_str,
+                )
+            )
+
+    # Always record every AI decision in the moderation queue as an audit log entry.
+    # Priority reflects severity: rejected/flagged float to the top.
+    from app.workers.moderation_tasks import record_moderation_decision_task
+
+    priority = (
+        2 if mod_status == ModerationStatus.REJECTED
+        else 1 if mod_status == ModerationStatus.FLAGGED
+        else 0
+    )
+    record_moderation_decision_task.delay(
+        video_id=video_id,
+        moderation_result_id=result_id,
+        final_status=mod_status.value,
+        priority=priority,
+        tenant_id=tenant_id,
+    )
 
     logger.info(
         "run_analysis_pipeline_task_done",
