@@ -30,6 +30,7 @@ from app.schemas.video import (
     PaginatedVideos,
     UploadUrlRequest,
     UploadUrlResponse,
+    UrlAnalysisRequest,
     VideoCreate,
     VideoResponse,
     VideoStatusResponse,
@@ -145,6 +146,62 @@ async def get_upload_url(
         s3_key=s3_key,
         expires_in=settings.S3_PRESIGNED_URL_EXPIRE,
     )
+
+
+# ── POST /videos/analyze-url ─────────────────────────────────────────────────
+
+
+@router.post(
+    "/analyze-url",
+    response_model=VideoResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Submit a web/YouTube URL for AI content moderation",
+)
+async def analyze_url_video(
+    body: UrlAnalysisRequest,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    storage: Annotated[StorageService, Depends(get_storage_service)],
+) -> VideoResponse:
+    from app.models.video import VideoSource
+
+    # Derive a display title: explicit > URL hostname > raw URL snippet
+    title = body.title or body.url[:120]
+
+    video = Video(
+        title=title,
+        source=VideoSource.URL,
+        source_url=body.url,
+        owner_id=current_user.id,
+        tenant_id=current_user.tenant_id,
+    )
+    db.add(video)
+    await db.flush()
+
+    # Fetch active policy rules
+    policy_result = await db.execute(
+        select(Policy).where(
+            Policy.is_active.is_(True),
+            or_(Policy.is_default.is_(True), Policy.owner_id == current_user.id),
+        )
+    )
+    active_policies = policy_result.scalars().all()
+    policy_rules: list[dict] = []
+    for p in active_policies:
+        if p.rules:
+            policy_rules.extend(p.rules)
+
+    from app.workers.video_tasks import process_url_video_task
+
+    process_url_video_task.delay(str(video.id), body.url, policy_rules)
+
+    logger.info(
+        "url_video_registered",
+        video_id=str(video.id),
+        user_id=str(current_user.id),
+        url=body.url,
+    )
+    return _build_video_response(video, storage)
 
 
 # ── POST /videos/check-duplicates ────────────────────────────────────────────

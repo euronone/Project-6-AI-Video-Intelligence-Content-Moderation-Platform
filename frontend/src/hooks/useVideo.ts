@@ -53,6 +53,22 @@ export function useDeleteVideo() {
   });
 }
 
+export function useAnalyzeUrl() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: { url: string; title?: string }) =>
+      apiClient.post<Video>('/videos/analyze-url', payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: videoKeys.all });
+      toast.success('URL queued for AI analysis');
+    },
+    onError: () => {
+      toast.error('Failed to submit URL. Check that it is a supported video link.');
+    },
+  });
+}
+
 export function useBulkDeleteVideos() {
   const queryClient = useQueryClient();
 

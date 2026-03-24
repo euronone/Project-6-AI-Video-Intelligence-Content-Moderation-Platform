@@ -18,6 +18,7 @@ class VideoSource(str, enum.Enum):
     UPLOAD = "upload"
     LIVE = "live"
     API = "api"
+    URL = "url"
 
 
 class Video(Base, UUIDMixin, TimestampMixin):
@@ -48,5 +49,6 @@ class Video(Base, UUIDMixin, TimestampMixin):
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     tenant_id: Mapped[str | None] = mapped_column(String(255), index=True, nullable=True)
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)  # original web/YouTube URL
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     deleted_at: Mapped[str | None] = mapped_column(String(64), nullable=True)  # ISO timestamp

@@ -17,7 +17,7 @@ export type VideoStatus =
   | 'failed'
   | 'deleted';
 
-export type VideoSource = 'upload' | 'api' | 'live';
+export type VideoSource = 'upload' | 'api' | 'live' | 'url';
 
 // Matches backend VideoResponse schema
 export interface Video {
@@ -31,6 +31,7 @@ export interface Video {
   duration_seconds?: number;
   file_size_bytes?: number;
   content_type?: string;
+  source_url?: string;
   s3_key?: string;
   thumbnail_s3_key?: string;
   thumbnail_url?: string;

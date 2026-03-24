@@ -54,6 +54,7 @@ dependencies = [
 
     # Video processing
     "opencv-python-headless==4.10.0.84",
+    "yt-dlp>=2024.1.1",               # download videos from YouTube and 1000+ sites
 
     # WebSockets / Socket.IO
     "python-socketio[asyncio]==5.11.4",
