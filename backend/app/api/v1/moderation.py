@@ -8,7 +8,8 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 import structlog
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy import delete as sql_delete
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,6 +26,7 @@ from app.models.moderation import (
 from app.models.user import UserRole
 from app.models.video import Video
 from app.schemas.moderation import (
+    ClearQueueResponse,
     ModerationQueueItemResponse,
     ModerationResultResponse,
     OverrideRequest,
@@ -155,8 +157,33 @@ async def submit_review(
     current_user: OperatorUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ModerationResultResponse:
+    # Try by ModerationResult.id first
     result = await db.execute(select(ModerationResult).where(ModerationResult.id == moderation_id))
     moderation = result.scalar_one_or_none()
+
+    # Fallback: caller may have passed a queue item ID instead of a result ID
+    queue_item = None
+    if not moderation:
+        qi_result = await db.execute(
+            select(ModerationQueueItem).where(ModerationQueueItem.id == moderation_id)
+        )
+        queue_item = qi_result.scalar_one_or_none()
+        if queue_item:
+            if queue_item.moderation_result_id:
+                # Follow the FK directly
+                mr_result = await db.execute(
+                    select(ModerationResult).where(ModerationResult.id == queue_item.moderation_result_id)
+                )
+                moderation = mr_result.scalar_one_or_none()
+            if not moderation:
+                # FK is null or stale — find by video_id and repair the link
+                mr_result = await db.execute(
+                    select(ModerationResult).where(ModerationResult.video_id == queue_item.video_id)
+                )
+                moderation = mr_result.scalar_one_or_none()
+                if moderation:
+                    queue_item.moderation_result_id = moderation.id
+
     if not moderation:
         raise NotFoundError("ModerationResult", str(moderation_id))
 
@@ -172,11 +199,14 @@ async def submit_review(
     moderation.review_notes = body.notes
     moderation.reviewed_at = datetime.now(UTC).isoformat()
 
-    # Update queue item status too
-    queue_result = await db.execute(
-        select(ModerationQueueItem).where(ModerationQueueItem.moderation_result_id == moderation_id)
-    )
-    queue_item = queue_result.scalar_one_or_none()
+    # Update queue item status — use the one we already found, or look it up by result ID
+    if not queue_item:
+        qi_result = await db.execute(
+            select(ModerationQueueItem).where(
+                ModerationQueueItem.moderation_result_id == moderation.id
+            )
+        )
+        queue_item = qi_result.scalar_one_or_none()
     if queue_item:
         queue_item.status = status_map[body.action]
 
@@ -220,3 +250,68 @@ async def override_decision(
         admin=str(current_user.id),
     )
     return ModerationResultResponse.model_validate(moderation)
+
+
+# ── DELETE /moderation/queue/clear ───────────────────────────────────────────
+
+
+@router.delete(
+    "/queue/clear",
+    response_model=ClearQueueResponse,
+    summary="Remove all decided (non-pending) queue items for the current user",
+)
+async def clear_finished_queue(
+    current_user: OperatorUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ClearQueueResponse:
+    decided = [
+        ModerationStatus.APPROVED,
+        ModerationStatus.REJECTED,
+        ModerationStatus.FLAGGED,
+        ModerationStatus.ESCALATED,
+    ]
+    owned_video_ids = select(Video.id).where(Video.owner_id == current_user.id)
+
+    result = await db.execute(
+        sql_delete(ModerationQueueItem)
+        .where(
+            ModerationQueueItem.status.in_(decided),
+            ModerationQueueItem.video_id.in_(owned_video_ids),
+        )
+        .returning(ModerationQueueItem.id)
+    )
+    removed = len(result.fetchall())
+    await db.commit()
+
+    logger.info("queue_cleared", user_id=str(current_user.id), removed=removed)
+    return ClearQueueResponse(removed=removed)
+
+
+# ── DELETE /moderation/queue/{item_id} ───────────────────────────────────────
+
+
+@router.delete(
+    "/queue/{item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remove a single queue item",
+)
+async def delete_queue_item(
+    item_id: uuid.UUID,
+    current_user: OperatorUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> None:
+    owned_video_ids = select(Video.id).where(Video.owner_id == current_user.id)
+
+    result = await db.execute(
+        select(ModerationQueueItem).where(
+            ModerationQueueItem.id == item_id,
+            ModerationQueueItem.video_id.in_(owned_video_ids),
+        )
+    )
+    item = result.scalar_one_or_none()
+    if not item:
+        raise NotFoundError("QueueItem", str(item_id))
+
+    await db.delete(item)
+    await db.commit()
+    logger.info("queue_item_deleted", item_id=str(item_id), user_id=str(current_user.id))

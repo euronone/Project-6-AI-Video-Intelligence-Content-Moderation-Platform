@@ -55,6 +55,41 @@ export function useSubmitReview() {
   });
 }
 
+export function useClearFinishedQueue() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      apiClient.delete<{ removed: number }>('/moderation/queue/clear'),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['moderation', 'queue'] });
+      toast.success(
+        result.removed === 0
+          ? 'No finished items to clear'
+          : `Cleared ${result.removed} finished item${result.removed !== 1 ? 's' : ''} from queue`
+      );
+    },
+    onError: () => {
+      toast.error('Failed to clear queue');
+    },
+  });
+}
+
+export function useDeleteQueueItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (itemId: string) =>
+      apiClient.delete(`/moderation/queue/${itemId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['moderation', 'queue'] });
+    },
+    onError: () => {
+      toast.error('Failed to remove item');
+    },
+  });
+}
+
 export function usePolicies() {
   return useQuery({
     queryKey: moderationKeys.policies,

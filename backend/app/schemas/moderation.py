@@ -75,3 +75,7 @@ class PaginatedQueue(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class ClearQueueResponse(BaseModel):
+    removed: int

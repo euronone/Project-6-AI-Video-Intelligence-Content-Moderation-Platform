@@ -53,6 +53,28 @@ export function useDeleteVideo() {
   });
 }
 
+export function useBulkDeleteVideos() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (videoIds: string[]) =>
+      apiClient.post<{ deleted: number; skipped: number }>('/videos/bulk-delete', {
+        video_ids: videoIds,
+      }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: videoKeys.all });
+      toast.success(
+        result.deleted === 1
+          ? '1 video file deleted — metadata and thumbnail retained'
+          : `${result.deleted} video files deleted — metadata and thumbnails retained`
+      );
+    },
+    onError: () => {
+      toast.error('Bulk delete failed. Please try again.');
+    },
+  });
+}
+
 interface DuplicateCheckItem { filename: string; file_size_bytes: number; }
 interface DuplicateCheckResult { filename: string; file_size_bytes: number; exists: boolean; }
 

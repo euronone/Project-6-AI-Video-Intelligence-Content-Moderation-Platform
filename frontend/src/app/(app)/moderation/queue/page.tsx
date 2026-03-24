@@ -1,21 +1,32 @@
 'use client';
 
 import { useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ModerationBadge } from '@/components/moderation/ModerationBadge';
 import { ReviewPanel } from '@/components/moderation/ReviewPanel';
-import { useModerationQueue } from '@/hooks/useModeration';
+import { useModerationQueue, useClearFinishedQueue, useDeleteQueueItem } from '@/hooks/useModeration';
 import { useModerationStore } from '@/stores/moderationStore';
 import { formatDistanceToNow } from 'date-fns';
 import { PAGE_SIZE_DEFAULT } from '@/lib/constants';
 import type { ModerationStatus } from '@/types/moderation';
 
+const DECIDED_STATUSES: ModerationStatus[] = ['approved', 'rejected', 'flagged', 'escalated'];
+
 export default function ModerationQueuePage() {
   const [page, setPage] = useState(1);
+  const [confirmClear, setConfirmClear] = useState(false);
   const { queueFilter, setQueueFilter, selectedQueueItemId, selectQueueItem } =
     useModerationStore();
 
@@ -25,8 +36,21 @@ export default function ModerationQueuePage() {
     status: queueFilter === 'all' ? undefined : (queueFilter as ModerationStatus),
   });
 
+  const { mutate: clearFinished, isPending: isClearing } = useClearFinishedQueue();
+  const { mutate: deleteItem } = useDeleteQueueItem();
+
   const selectedItem = data?.items.find((i) => i.id === selectedQueueItemId);
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE_DEFAULT) : 1;
+
+  const finishedCount = data?.items.filter((i) =>
+    DECIDED_STATUSES.includes(i.status as ModerationStatus)
+  ).length ?? 0;
+
+  const handleRemoveItem = (itemId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (selectedQueueItemId === itemId) selectQueueItem(null);
+    deleteItem(itemId);
+  };
 
   return (
     <div className="flex h-full gap-0">
@@ -39,9 +63,22 @@ export default function ModerationQueuePage() {
               Autonomous AI decisions — {data ? `${data.total} video${data.total !== 1 ? 's' : ''} processed` : 'Loading…'}
             </p>
           </div>
-          <Button variant="outline" size="icon" onClick={() => refetch()} disabled={isFetching} aria-label="Refresh">
-            <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-          </Button>
+          <div className="flex items-center gap-2">
+            {finishedCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmClear(true)}
+                disabled={isClearing}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Clear finished ({finishedCount})
+              </Button>
+            )}
+            <Button variant="outline" size="icon" onClick={() => refetch()} disabled={isFetching} aria-label="Refresh">
+              <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
         </div>
 
         {/* Filter */}
@@ -83,18 +120,19 @@ export default function ModerationQueuePage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
+                  <TableHead>Video</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Priority</TableHead>
                   <TableHead>Violations</TableHead>
                   <TableHead>Created</TableHead>
+                  <TableHead className="w-8" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {data?.items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
                       No AI decisions recorded yet. Upload a video to begin.
                     </TableCell>
                   </TableRow>
@@ -121,6 +159,17 @@ export default function ModerationQueuePage() {
                       <TableCell>{item.violations?.length ?? item.report?.violations?.length ?? 0}</TableCell>
                       <TableCell className="text-muted-foreground text-xs">
                         {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 opacity-0 group-hover:opacity-100 hover:text-destructive"
+                          aria-label="Remove from queue"
+                          onClick={(e) => handleRemoveItem(item.id, e)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
@@ -150,6 +199,31 @@ export default function ModerationQueuePage() {
       {selectedItem && (
         <ReviewPanel item={selectedItem} onClose={() => selectQueueItem(null)} />
       )}
+
+      {/* Confirm clear dialog */}
+      <Dialog open={confirmClear} onOpenChange={setConfirmClear}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clear {finishedCount} finished item{finishedCount !== 1 ? 's' : ''}?</DialogTitle>
+            <DialogDescription>
+              This removes all approved, rejected, flagged, and escalated items from the queue view.
+              AI analysis results and video metadata are permanently retained — only the queue entries are removed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmClear(false)} disabled={isClearing}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isClearing}
+              onClick={() => clearFinished(undefined, { onSuccess: () => setConfirmClear(false) })}
+            >
+              {isClearing ? 'Clearing…' : 'Clear finished'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
