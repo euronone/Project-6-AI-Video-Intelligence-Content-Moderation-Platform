@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { format, subDays } from 'date-fns';
-import { Film, ShieldAlert, Clock, Activity, ArrowRight } from 'lucide-react';
+import { Film, ShieldAlert, CheckCircle, Activity, ArrowRight } from 'lucide-react';
 import { StatCard } from '@/components/analytics/StatCard';
 import { ModerationBadge } from '@/components/moderation/ModerationBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +13,6 @@ import { useAnalyticsSummary, useViolationsData } from '@/hooks/useAnalytics';
 import { useModerationQueue } from '@/hooks/useModeration';
 import { useVideoList } from '@/hooks/useVideo';
 import { useAuth } from '@/hooks/useAuth';
-import { formatPercent } from '@/lib/utils';
 import { ROUTES } from '@/lib/constants';
 
 // Lazy-load chart components to keep Recharts out of the initial bundle
@@ -75,21 +74,21 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Violation Rate"
-          value={summary ? formatPercent(summary.violation_rate) : '—'}
+          value={summary ? `${summary.violation_rate_percent}%` : '—'}
           icon={Activity}
           isLoading={summaryLoading}
           description={
             summary
-              ? `${summary.flagged_count} flagged · ${summary.rejected_count} rejected`
+              ? `${summary.total_violations_detected} detected · ${summary.videos_rejected} rejected`
               : undefined
           }
         />
         <StatCard
-          title="Avg. Latency"
-          value={summary ? `${summary.avg_latency_ms}ms` : '—'}
-          icon={Clock}
+          title="Approved"
+          value={summaryLoading ? '—' : (summary?.videos_approved ?? 0)}
+          icon={CheckCircle}
           isLoading={summaryLoading}
-          description={summary ? `P95: ${summary.p95_latency_ms}ms` : undefined}
+          description={summary ? `${summary.videos_escalated} escalated` : undefined}
         />
       </div>
 

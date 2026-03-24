@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn, formatPercent } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { VIOLATION_CATEGORY_LABELS } from '@/lib/constants';
 import type { ViolationBreakdown } from '@/types/analytics';
 
@@ -62,7 +62,7 @@ export function HeatmapOverlay({ data, isLoading, className }: HeatmapOverlayPro
                     />
                   </div>
                   <div className="w-24 text-right text-xs text-muted-foreground tabular-nums">
-                    {item.count} ({formatPercent(item.rate)})
+                    {item.count} ({item.percentage.toFixed(1)}%)
                   </div>
                 </div>
               );

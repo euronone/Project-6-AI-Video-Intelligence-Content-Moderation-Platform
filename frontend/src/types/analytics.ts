@@ -1,38 +1,43 @@
 import type { ViolationCategory } from './moderation';
 
+// Matches backend app/schemas/analytics.py → AnalyticsSummary
 export interface AnalyticsSummary {
-  processed_count: number;
-  violation_rate: number;
-  avg_latency_ms: number;
-  p95_latency_ms: number;
-  flagged_count: number;
-  rejected_count: number;
-  period_start: string;
-  period_end: string;
+  total_videos_processed: number;
+  total_violations_detected: number;
+  violation_rate_percent: number; // 0–100
+  avg_confidence: number;
+  videos_approved: number;
+  videos_rejected: number;
+  videos_escalated: number;
+  top_violation_categories: { category: string; count: number }[];
 }
 
+// Matches backend ViolationDataPoint
 export interface ViolationDataPoint {
   date: string;
   count: number;
   category?: ViolationCategory;
-  policy_id?: string;
 }
 
+// Matches backend ViolationBreakdown
 export interface ViolationBreakdown {
-  category: ViolationCategory;
+  category: string;
   count: number;
-  rate: number;
+  percentage: number;
 }
 
+// Matches backend ViolationsResponse (flat, no data wrapper)
+export interface ViolationsResponse {
+  time_series: ViolationDataPoint[];
+  breakdown: ViolationBreakdown[];
+  total: number;
+  date_from: string;
+  date_to: string;
+}
+
+// Kept for backward compatibility (not used in hooks)
 export interface AnalyticsSummaryResponse {
   data: AnalyticsSummary;
-}
-
-export interface ViolationsResponse {
-  data: {
-    time_series: ViolationDataPoint[];
-    breakdown: ViolationBreakdown[];
-  };
 }
 
 export interface AnalyticsParams {

@@ -30,7 +30,7 @@ export function useViolationsData(params: ViolationsParams = {}) {
     queryKey: analyticsKeys.violations(params),
     // Same unwrapping — the payload is the inner data shape, not the wrapper.
     queryFn: () =>
-      apiClient.get<ViolationsResponse['data']>('/analytics/violations', { params }),
+      apiClient.get<ViolationsResponse>('/analytics/violations', { params }),
     staleTime: 5 * 60 * 1000,
   });
 }
