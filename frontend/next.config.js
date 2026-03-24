@@ -3,11 +3,17 @@ const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   images: {
-    domains: [
-      'localhost',
-      's3.amazonaws.com',
-      process.env.S3_BUCKET_DOMAIN || '',
-    ].filter(Boolean),
+    remotePatterns: [
+      // Local development / LocalStack
+      { protocol: 'http', hostname: 'localhost', port: '**' },
+      { protocol: 'http', hostname: '127.0.0.1', port: '**' },
+      // AWS S3 — virtual-hosted style: {bucket}.s3.{region}.amazonaws.com
+      { protocol: 'https', hostname: '**.amazonaws.com' },
+      // Custom S3 bucket domain via env var
+      ...(process.env.S3_BUCKET_DOMAIN
+        ? [{ protocol: 'https', hostname: process.env.S3_BUCKET_DOMAIN }]
+        : []),
+    ],
   },
   async rewrites() {
     // In mock mode the API client points at localhost:3000 (this server).
