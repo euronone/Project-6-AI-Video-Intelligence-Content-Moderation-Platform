@@ -32,6 +32,7 @@ class VideoResponse(BaseModel):
     description: str | None
     status: VideoStatus
     source: VideoSource
+    source_url: str | None = None
     s3_key: str | None
     thumbnail_s3_key: str | None
     duration_seconds: float | None
@@ -73,6 +74,11 @@ class PaginatedVideos(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class UrlAnalysisRequest(BaseModel):
+    url: str = Field(..., min_length=10, max_length=2048)
+    title: str | None = Field(None, max_length=500)
 
 
 class BulkDeleteRequest(BaseModel):
