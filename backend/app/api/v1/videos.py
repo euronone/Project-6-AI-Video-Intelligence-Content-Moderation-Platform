@@ -23,6 +23,8 @@ from app.models.moderation import ModerationQueueItem
 from app.models.policy import Policy
 from app.models.video import Video, VideoStatus
 from app.schemas.video import (
+    DuplicateCheckItem,
+    DuplicateCheckResult,
     PaginatedVideos,
     UploadUrlRequest,
     UploadUrlResponse,
@@ -141,6 +143,39 @@ async def get_upload_url(
         s3_key=s3_key,
         expires_in=settings.S3_PRESIGNED_URL_EXPIRE,
     )
+
+
+# ── POST /videos/check-duplicates ────────────────────────────────────────────
+
+
+@router.post(
+    "/check-duplicates",
+    response_model=list[DuplicateCheckResult],
+    summary="Check which filenames+sizes already exist for the current user",
+)
+async def check_duplicates(
+    body: list[DuplicateCheckItem],
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[DuplicateCheckResult]:
+    results: list[DuplicateCheckResult] = []
+    for item in body:
+        row = await db.execute(
+            select(Video.id).where(
+                Video.title == item.filename,
+                Video.file_size_bytes == item.file_size_bytes,
+                Video.owner_id == current_user.id,
+                Video.deleted_at.is_(None),
+            ).limit(1)
+        )
+        results.append(
+            DuplicateCheckResult(
+                filename=item.filename,
+                file_size_bytes=item.file_size_bytes,
+                exists=row.scalar() is not None,
+            )
+        )
+    return results
 
 
 # ── POST /videos ──────────────────────────────────────────────────────────────

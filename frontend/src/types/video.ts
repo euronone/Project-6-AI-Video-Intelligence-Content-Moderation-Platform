@@ -1,3 +1,12 @@
+// Represents a file selected for upload, with per-file upload state
+export interface UploadFile {
+  file: File;
+  id: string;
+  status: 'pending' | 'uploading' | 'registering' | 'done' | 'error';
+  progress: number;
+  error?: string;
+}
+
 // VideoStatus values match the backend VideoStatus enum
 export type VideoStatus =
   | 'pending'

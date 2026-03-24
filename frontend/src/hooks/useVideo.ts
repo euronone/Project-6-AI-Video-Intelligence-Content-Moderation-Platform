@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -11,6 +12,7 @@ import type {
   UploadUrlRequest,
   UploadUrlResponse,
   RegisterUploadRequest,
+  UploadFile,
 } from '@/types/video';
 import { useVideoStore } from '@/stores/videoStore';
 
@@ -49,6 +51,103 @@ export function useDeleteVideo() {
       toast.error('Failed to delete video');
     },
   });
+}
+
+interface DuplicateCheckItem { filename: string; file_size_bytes: number; }
+interface DuplicateCheckResult { filename: string; file_size_bytes: number; exists: boolean; }
+
+export async function checkDuplicates(files: UploadFile[]): Promise<Set<string>> {
+  const payload: DuplicateCheckItem[] = files.map((f) => ({
+    filename: f.file.name,
+    file_size_bytes: f.file.size,
+  }));
+  const results = await apiClient.post<DuplicateCheckResult[]>('/videos/check-duplicates', payload);
+  return new Set(
+    results.filter((r) => r.exists).map((r) => `${r.filename}-${r.file_size_bytes}`)
+  );
+}
+
+type FileUpdateFn = (id: string, patch: Partial<Pick<UploadFile, 'status' | 'progress' | 'error'>>) => void;
+
+export function useBulkUploadVideo() {
+  const queryClient = useQueryClient();
+  const { addUpload, updateUpload } = useVideoStore();
+  const [isUploading, setIsUploading] = useState(false);
+
+  const uploadAll = useCallback(
+    async (files: UploadFile[], onUpdate: FileUpdateFn) => {
+      const pending = files.filter((f) => f.status === 'pending' || f.status === 'error');
+      if (pending.length === 0) return { succeeded: 0, failed: 0 };
+
+      setIsUploading(true);
+
+      const results = await Promise.allSettled(
+        pending.map(async ({ id, file }) => {
+          try {
+            onUpdate(id, { status: 'uploading', progress: 0 });
+
+            const urlRes = await apiClient.post<UploadUrlResponse>('/videos/upload-url', {
+              filename: file.name,
+              content_type: file.type,
+              file_size_bytes: file.size,
+            } as UploadUrlRequest);
+            const { upload_url, s3_key } = urlRes;
+
+            addUpload({ videoId: id, filename: file.name, progress: 0, status: 'uploading' });
+
+            await axios.put(upload_url, file, {
+              headers: { 'Content-Type': file.type },
+              onUploadProgress: (e) => {
+                const pct = e.total ? Math.round((e.loaded / e.total) * 100) : 0;
+                onUpdate(id, { progress: pct });
+                updateUpload(id, { progress: pct });
+              },
+            });
+
+            onUpdate(id, { status: 'registering', progress: 100 });
+            updateUpload(id, { status: 'registering', progress: 100 });
+
+            await apiClient.post<Video>('/videos', {
+              title: file.name,
+              source: 'upload',
+              s3_key,
+              content_type: file.type,
+              file_size_bytes: file.size,
+            } as RegisterUploadRequest);
+
+            onUpdate(id, { status: 'done' });
+            updateUpload(id, { status: 'done' });
+          } catch {
+            onUpdate(id, { status: 'error', error: 'Upload failed' });
+            updateUpload(id, { status: 'error', error: 'Upload failed' });
+            throw new Error('Upload failed');
+          }
+        })
+      );
+
+      setIsUploading(false);
+
+      const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+      const failed = results.length - succeeded;
+
+      if (succeeded > 0) {
+        queryClient.invalidateQueries({ queryKey: videoKeys.all });
+        toast.success(
+          succeeded === 1
+            ? '1 video uploaded and queued for processing'
+            : `${succeeded} videos uploaded and queued for processing`
+        );
+      }
+      if (failed > 0) {
+        toast.error(`${failed} video${failed > 1 ? 's' : ''} failed to upload`);
+      }
+
+      return { succeeded, failed };
+    },
+    [queryClient, addUpload, updateUpload]
+  );
+
+  return { uploadAll, isUploading };
 }
 
 export function useUploadVideo() {
