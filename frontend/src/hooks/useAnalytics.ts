@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 import type {
-  AnalyticsSummaryResponse,
+  AnalyticsSummary,
   ViolationsResponse,
   AnalyticsParams,
   ViolationsParams,
@@ -17,8 +17,10 @@ export const analyticsKeys = {
 export function useAnalyticsSummary(params: AnalyticsParams = {}) {
   return useQuery({
     queryKey: analyticsKeys.summary(params),
+    // apiClient.get already unwraps the { data: ... } envelope, so the
+    // resolved type is AnalyticsSummary, not AnalyticsSummaryResponse.
     queryFn: () =>
-      apiClient.get<AnalyticsSummaryResponse>('/analytics/summary', { params }),
+      apiClient.get<AnalyticsSummary>('/analytics/summary', { params }),
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -26,8 +28,9 @@ export function useAnalyticsSummary(params: AnalyticsParams = {}) {
 export function useViolationsData(params: ViolationsParams = {}) {
   return useQuery({
     queryKey: analyticsKeys.violations(params),
+    // Same unwrapping — the payload is the inner data shape, not the wrapper.
     queryFn: () =>
-      apiClient.get<ViolationsResponse>('/analytics/violations', { params }),
+      apiClient.get<ViolationsResponse['data']>('/analytics/violations', { params }),
     staleTime: 5 * 60 * 1000,
   });
 }
