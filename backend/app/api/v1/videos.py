@@ -5,6 +5,7 @@ CRUD, upload URL generation, and status polling for videos.
 
 import json
 import uuid
+from contextlib import suppress
 from datetime import UTC, datetime
 from typing import Annotated
 
@@ -36,7 +37,7 @@ router = APIRouter(prefix="/videos", tags=["videos"])
 logger = structlog.get_logger(__name__)
 
 
-def _build_video_response(video: Video) -> VideoResponse:
+def _build_video_response(video: Video, storage: StorageService | None = None) -> VideoResponse:
     """Converts a Video ORM object to VideoResponse, injecting pre-signed URLs."""
     tags: list[str] | None = None
     if video.tags:
@@ -45,8 +46,16 @@ def _build_video_response(video: Video) -> VideoResponse:
         except (json.JSONDecodeError, TypeError):
             tags = None
 
-    # In production these would be pre-signed S3 URLs via storage_service.
-    # For now we return the s3_key; services layer will decorate with real URLs.
+    playback_url: str | None = None
+    thumbnail_url: str | None = None
+    if storage:
+        if video.s3_key:
+            with suppress(Exception):
+                playback_url = storage.presigned_get_url(video.s3_key)
+        if video.thumbnail_s3_key:
+            with suppress(Exception):
+                thumbnail_url = storage.presigned_get_url(video.thumbnail_s3_key)
+
     return VideoResponse(
         id=video.id,
         title=video.title,
@@ -63,6 +72,8 @@ def _build_video_response(video: Video) -> VideoResponse:
         tenant_id=video.tenant_id,
         created_at=video.created_at,
         updated_at=video.updated_at,
+        playback_url=playback_url,
+        thumbnail_url=thumbnail_url,
     )
 
 
@@ -73,6 +84,7 @@ def _build_video_response(video: Video) -> VideoResponse:
 async def list_videos(
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    storage: Annotated[StorageService, Depends(get_storage_service)],
     page: int = Query(1, ge=1),
     page_size: int = Query(settings.DEFAULT_PAGE_SIZE, ge=1, le=settings.MAX_PAGE_SIZE),
     status_filter: VideoStatus | None = Query(None, alias="status"),  # noqa: B008
@@ -96,7 +108,7 @@ async def list_videos(
     videos = result.scalars().all()
 
     return PaginatedVideos(
-        items=[_build_video_response(v) for v in videos],
+        items=[_build_video_response(v, storage) for v in videos],
         total=total,
         page=page,
         page_size=page_size,
@@ -144,6 +156,7 @@ async def create_video(
     body: VideoCreate,
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    storage: Annotated[StorageService, Depends(get_storage_service)],
 ) -> VideoResponse:
     tags_json = json.dumps(body.tags) if body.tags else None
 
@@ -180,7 +193,7 @@ async def create_video(
     process_video.delay(str(video.id), body.s3_key, policy_rules)
 
     logger.info("video_registered", video_id=str(video.id), user_id=str(current_user.id))
-    return _build_video_response(video)
+    return _build_video_response(video, storage)
 
 
 # ── GET /videos/{id} ──────────────────────────────────────────────────────────
@@ -191,6 +204,7 @@ async def get_video(
     video_id: uuid.UUID,
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    storage: Annotated[StorageService, Depends(get_storage_service)],
 ) -> VideoResponse:
     result = await db.execute(select(Video).where(Video.id == video_id, Video.deleted_at.is_(None)))
     video = result.scalar_one_or_none()
@@ -200,7 +214,7 @@ async def get_video(
     if video.owner_id != current_user.id and current_user.tenant_id != video.tenant_id:
         raise ForbiddenError("You do not have access to this video.")
 
-    return _build_video_response(video)
+    return _build_video_response(video, storage)
 
 
 # ── GET /videos/{id}/status ───────────────────────────────────────────────────
@@ -233,6 +247,7 @@ async def update_video(
     body: VideoUpdate,
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    storage: Annotated[StorageService, Depends(get_storage_service)],
 ) -> VideoResponse:
     result = await db.execute(select(Video).where(Video.id == video_id, Video.deleted_at.is_(None)))
     video = result.scalar_one_or_none()
@@ -249,7 +264,7 @@ async def update_video(
         video.tags = json.dumps(body.tags)
 
     logger.info("video_updated", video_id=str(video_id))
-    return _build_video_response(video)
+    return _build_video_response(video, storage)
 
 
 # ── DELETE /videos/{id} ───────────────────────────────────────────────────────
