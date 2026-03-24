@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ROUTES } from '@/lib/constants';
 
 export function useAuth() {
-  const { user, isAuthenticated, isLoading, error, login, register, logout, clearError } =
+  const { user, isAuthenticated, isLoading, error, login, register, logout, clearError, setUser } =
     useAuthStore();
   const router = useRouter();
 
@@ -14,8 +14,13 @@ export function useAuth() {
     router.push(ROUTES.dashboard);
   };
 
-  const handleRegister = async (email: string, password: string, name: string, role: 'admin' | 'operator') => {
-    await register(email, password, name, role);
+  const handleRegister = async (
+    email: string,
+    password: string,
+    name: string,
+    whatsapp_number?: string,
+  ) => {
+    await register(email, password, name, whatsapp_number);
     router.push(ROUTES.login);
   };
 
@@ -33,6 +38,7 @@ export function useAuth() {
     register: handleRegister,
     logout: handleLogout,
     clearError,
+    setUser,
     isAdmin: user?.role === 'admin',
     isOperator: user?.role === 'operator' || user?.role === 'admin',
   };

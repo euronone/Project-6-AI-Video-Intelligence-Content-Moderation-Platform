@@ -1,13 +1,16 @@
 """
-User management API — admin only.
+User management API.
 
-GET    /users          list all users
-POST   /users          create a user
-PATCH  /users/{id}     update name / role / password / is_active
-DELETE /users/{id}     remove a user (cannot remove yourself)
+PATCH  /users/me/password   change own password (any authenticated user)
+PATCH  /users/me/profile    update own profile / address (any authenticated user)
+GET    /users               list all users (admin only)
+POST   /users               create a user (admin only)
+PATCH  /users/{id}          update name / role / password / is_active / is_blocked (admin only)
+DELETE /users/{id}          remove a user (admin only — cannot remove yourself)
 """
 
 import uuid
+from datetime import datetime, timezone
 from typing import Annotated
 
 import structlog
@@ -24,6 +27,7 @@ from app.schemas.user import (
     ChangeOwnPasswordRequest,
     UserCreate,
     UserListResponse,
+    UserProfileUpdate,
     UserResponse,
     UserUpdate,
 )
@@ -47,6 +51,37 @@ async def change_own_password(
     current_user.password_hash = hash_password(body.new_password)
     await db.flush()
     logger.info("user_changed_own_password", user_id=str(current_user.id))
+    return UserResponse.model_validate(current_user)
+
+
+@router.patch(
+    "/me/profile",
+    response_model=UserResponse,
+    summary="Update own profile details (any authenticated user)",
+)
+async def update_own_profile(
+    body: UserProfileUpdate,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> UserResponse:
+    if body.name is not None:
+        current_user.name = body.name
+    if body.whatsapp_number is not None:
+        current_user.whatsapp_number = body.whatsapp_number
+    if body.address_line1 is not None:
+        current_user.address_line1 = body.address_line1
+    if body.address_line2 is not None:
+        current_user.address_line2 = body.address_line2
+    if body.city is not None:
+        current_user.city = body.city
+    if body.state is not None:
+        current_user.state = body.state
+    if body.postal_code is not None:
+        current_user.postal_code = body.postal_code
+    if body.country is not None:
+        current_user.country = body.country
+    await db.flush()
+    logger.info("user_updated_own_profile", user_id=str(current_user.id))
     return UserResponse.model_validate(current_user)
 
 
@@ -119,6 +154,18 @@ async def update_user(
         user.is_active = body.is_active
     if body.password is not None:
         user.password_hash = hash_password(body.password)
+    if body.is_blocked is not None:
+        user.is_blocked = body.is_blocked
+        if body.is_blocked:
+            user.blocked_at = datetime.now(tz=timezone.utc)
+            user.blocked_reason = body.blocked_reason
+            # A permanently blocked user is also deactivated
+            user.is_active = False
+        else:
+            # Unblocking clears the block metadata and restores access
+            user.blocked_at = None
+            user.blocked_reason = None
+            user.is_active = True
 
     await db.flush()
     logger.info("user_updated_by_admin", user_id=str(user.id))

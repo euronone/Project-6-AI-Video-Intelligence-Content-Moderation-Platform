@@ -6,7 +6,20 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { KeyRound, Pencil, Plus, Shield, ShieldAlert, ShieldCheck, Trash2, UserX } from 'lucide-react';
+import {
+  Ban,
+  KeyRound,
+  Pencil,
+  Plus,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  ShieldOff,
+  Trash2,
+  UserX,
+  PauseCircle,
+  PlayCircle,
+} from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { apiClient } from '@/lib/api';
@@ -21,15 +34,21 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+type ManagedUserRole = 'admin' | 'operator' | 'api_consumer';
+
 interface ManagedUser {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'operator';
+  role: ManagedUserRole;
   organization_id: string;
+  is_active: boolean;
+  is_blocked: boolean;
+  blocked_reason: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -38,7 +57,7 @@ interface ManagedUser {
 const addUserSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Enter a valid email'),
-  role: z.enum(['admin', 'operator']),
+  role: z.enum(['admin', 'operator', 'api_consumer']),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
 }).refine((d) => d.password === d.confirmPassword, {
@@ -48,7 +67,7 @@ const addUserSchema = z.object({
 
 const editUserSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
-  role: z.enum(['admin', 'operator']),
+  role: z.enum(['admin', 'operator', 'api_consumer']),
 });
 
 const changePasswordSchema = z.object({
@@ -59,32 +78,38 @@ const changePasswordSchema = z.object({
   path: ['confirmPassword'],
 });
 
+const blockUserSchema = z.object({
+  blocked_reason: z.string().min(1, 'Please provide a reason for blocking').max(500),
+});
+
 type AddUserForm = z.infer<typeof addUserSchema>;
 type EditUserForm = z.infer<typeof editUserSchema>;
 type ChangePasswordForm = z.infer<typeof changePasswordSchema>;
+type BlockUserForm = z.infer<typeof blockUserSchema>;
 
 // ── Role selector ─────────────────────────────────────────────────────────────
-const ROLES = [
-  { value: 'admin' as const, label: 'Admin', icon: ShieldCheck },
-  { value: 'operator' as const, label: 'Operator', icon: ShieldAlert },
+const ROLES: { value: ManagedUserRole; label: string; icon: React.ElementType; description: string }[] = [
+  { value: 'admin', label: 'Admin', icon: ShieldCheck, description: 'Full platform access' },
+  { value: 'operator', label: 'Operator', icon: ShieldAlert, description: 'Review & monitor content' },
+  { value: 'api_consumer', label: 'API Consumer', icon: ShieldOff, description: 'API access only' },
 ];
 
 function RoleSelector({
   value,
   onChange,
 }: {
-  value: 'admin' | 'operator';
-  onChange: (v: 'admin' | 'operator') => void;
+  value: ManagedUserRole;
+  onChange: (v: ManagedUserRole) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-3 gap-2">
       {ROLES.map(({ value: v, label, icon: Icon }) => (
         <button
           key={v}
           type="button"
           onClick={() => onChange(v)}
           className={cn(
-            'flex items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-medium transition-colors hover:bg-accent',
+            'flex flex-col items-center gap-1 rounded-lg border-2 px-2 py-2 text-xs font-medium transition-colors hover:bg-accent',
             value === v ? 'border-primary bg-accent' : 'border-border'
           )}
         >
@@ -94,6 +119,17 @@ function RoleSelector({
       ))}
     </div>
   );
+}
+
+// ── Status badge ──────────────────────────────────────────────────────────────
+function UserStatusBadge({ user }: { user: ManagedUser }) {
+  if (user.is_blocked) {
+    return <Badge variant="destructive" className="text-xs">Blocked</Badge>;
+  }
+  if (!user.is_active) {
+    return <Badge variant="secondary" className="text-xs text-yellow-600 border-yellow-400">Suspended</Badge>;
+  }
+  return <Badge variant="outline" className="text-xs text-green-600 border-green-400">Active</Badge>;
 }
 
 // ── Add User dialog ───────────────────────────────────────────────────────────
@@ -169,13 +205,7 @@ function AddUserDialog({ open, onClose }: { open: boolean; onClose: () => void }
 }
 
 // ── Edit User dialog ──────────────────────────────────────────────────────────
-function EditUserDialog({
-  user,
-  onClose,
-}: {
-  user: ManagedUser | null;
-  onClose: () => void;
-}) {
+function EditUserDialog({ user, onClose }: { user: ManagedUser | null; onClose: () => void }) {
   const queryClient = useQueryClient();
   const { register, handleSubmit, watch, setValue, reset, formState: { errors } } =
     useForm<EditUserForm>({
@@ -224,13 +254,7 @@ function EditUserDialog({
 }
 
 // ── Change Password dialog ────────────────────────────────────────────────────
-function ChangePasswordDialog({
-  user,
-  onClose,
-}: {
-  user: ManagedUser | null;
-  onClose: () => void;
-}) {
+function ChangePasswordDialog({ user, onClose }: { user: ManagedUser | null; onClose: () => void }) {
   const { register, handleSubmit, reset, formState: { errors } } =
     useForm<ChangePasswordForm>({ resolver: zodResolver(changePasswordSchema) });
 
@@ -276,6 +300,64 @@ function ChangePasswordDialog({
   );
 }
 
+// ── Block User dialog ─────────────────────────────────────────────────────────
+function BlockUserDialog({ user, onClose }: { user: ManagedUser | null; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const { register, handleSubmit, reset, formState: { errors } } =
+    useForm<BlockUserForm>({ resolver: zodResolver(blockUserSchema) });
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: ({ blocked_reason }: BlockUserForm) =>
+      apiClient.patch(`/users/${user!.id}`, { is_blocked: true, blocked_reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success(`${user?.name} has been permanently blocked`);
+      onClose();
+      reset();
+    },
+    onError: () => toast.error('Failed to block user'),
+  });
+
+  return (
+    <Dialog open={!!user} onOpenChange={(o) => { if (!o) { onClose(); reset(); } }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Ban className="h-5 w-5 text-destructive" />
+            Permanently block — {user?.name}
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          This will permanently block the account and prevent the email address from being used
+          to register again. You can unblock from the admin panel.
+        </p>
+        <form onSubmit={handleSubmit((v) => mutate(v))} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="block-reason">Reason for block</Label>
+            <Textarea
+              id="block-reason"
+              placeholder="Explain why this account is being permanently blocked…"
+              rows={3}
+              {...register('blocked_reason')}
+            />
+            {errors.blocked_reason && (
+              <p className="text-xs text-destructive">{errors.blocked_reason.message}</p>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" onClick={() => { onClose(); reset(); }} disabled={isPending}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="destructive" disabled={isPending}>
+              {isPending ? 'Blocking…' : 'Block permanently'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── User Management tab ───────────────────────────────────────────────────────
 function UserManagement({ currentUserId }: { currentUserId?: string }) {
   const queryClient = useQueryClient();
@@ -283,11 +365,12 @@ function UserManagement({ currentUserId }: { currentUserId?: string }) {
   const [editTarget, setEditTarget] = useState<ManagedUser | null>(null);
   const [pwTarget, setPwTarget] = useState<ManagedUser | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ManagedUser | null>(null);
+  const [blockTarget, setBlockTarget] = useState<ManagedUser | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['users'],
     queryFn: () =>
-      apiClient.get<{ data: { items: ManagedUser[] } }>('/users').then((r) => r.data.items),
+      apiClient.get<{ items: ManagedUser[]; total: number }>('/users').then((r) => r.items),
   });
 
   const { mutate: deleteUser, isPending: deleting } = useMutation({
@@ -298,6 +381,25 @@ function UserManagement({ currentUserId }: { currentUserId?: string }) {
       setDeleteTarget(null);
     },
     onError: () => toast.error('Failed to remove user'),
+  });
+
+  const { mutate: toggleSuspend, isPending: suspending } = useMutation({
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
+      apiClient.patch(`/users/${id}`, { is_active }),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success(vars.is_active ? 'User access restored' : 'User suspended');
+    },
+    onError: () => toast.error('Failed to update user status'),
+  });
+
+  const { mutate: unblockUser, isPending: unblocking } = useMutation({
+    mutationFn: (id: string) => apiClient.patch(`/users/${id}`, { is_blocked: false }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('User unblocked and access restored');
+    },
+    onError: () => toast.error('Failed to unblock user'),
   });
 
   const initials = (name: string) =>
@@ -326,13 +428,14 @@ function UserManagement({ currentUserId }: { currentUserId?: string }) {
               <TableRow>
                 <TableHead>User</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="hidden sm:table-cell">Joined</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {data?.map((u) => (
-                <TableRow key={u.id}>
+                <TableRow key={u.id} className={cn(u.is_blocked ? 'opacity-60' : '')}>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8 shrink-0">
@@ -346,33 +449,86 @@ function UserManagement({ currentUserId }: { currentUserId?: string }) {
                           )}
                         </p>
                         <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                        {u.blocked_reason && (
+                          <p className="text-xs text-destructive truncate mt-0.5">
+                            Reason: {u.blocked_reason}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={u.role === 'admin' ? 'default' : 'secondary'} className="capitalize">
-                      {u.role}
+                    <Badge
+                      variant={u.role === 'admin' ? 'default' : 'secondary'}
+                      className="capitalize text-xs"
+                    >
+                      {u.role === 'api_consumer' ? 'API Consumer' : u.role}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <UserStatusBadge user={u} />
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">
                     {formatDistanceToNow(new Date(u.created_at), { addSuffix: true })}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
+                      {/* Edit */}
                       <Button
                         variant="ghost" size="icon" className="h-8 w-8"
                         onClick={() => setEditTarget(u)}
+                        disabled={u.is_blocked || u.id === currentUserId}
                         aria-label="Edit user"
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
+                      {/* Change password */}
                       <Button
                         variant="ghost" size="icon" className="h-8 w-8"
                         onClick={() => setPwTarget(u)}
+                        disabled={u.is_blocked}
                         aria-label="Change password"
                       >
                         <KeyRound className="h-3.5 w-3.5" />
                       </Button>
+                      {/* Suspend / Restore — only for non-blocked, non-self users */}
+                      {!u.is_blocked && u.id !== currentUserId && (
+                        <Button
+                          variant="ghost" size="icon" className="h-8 w-8"
+                          onClick={() => toggleSuspend({ id: u.id, is_active: !u.is_active })}
+                          disabled={suspending}
+                          aria-label={u.is_active ? 'Suspend user' : 'Restore user'}
+                          title={u.is_active ? 'Suspend access' : 'Restore access'}
+                        >
+                          {u.is_active
+                            ? <PauseCircle className="h-3.5 w-3.5 text-yellow-500" />
+                            : <PlayCircle className="h-3.5 w-3.5 text-green-500" />}
+                        </Button>
+                      )}
+                      {/* Block / Unblock */}
+                      {u.id !== currentUserId && (
+                        u.is_blocked ? (
+                          <Button
+                            variant="ghost" size="icon" className="h-8 w-8"
+                            onClick={() => unblockUser(u.id)}
+                            disabled={unblocking}
+                            aria-label="Unblock user"
+                            title="Unblock user"
+                          >
+                            <Shield className="h-3.5 w-3.5 text-green-500" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost" size="icon" className="h-8 w-8"
+                            onClick={() => setBlockTarget(u)}
+                            aria-label="Block permanently"
+                            title="Block permanently"
+                          >
+                            <Ban className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        )
+                      )}
+                      {/* Delete */}
                       <Button
                         variant="ghost" size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
@@ -395,6 +551,7 @@ function UserManagement({ currentUserId }: { currentUserId?: string }) {
       <AddUserDialog open={addOpen} onClose={() => setAddOpen(false)} />
       <EditUserDialog user={editTarget} onClose={() => setEditTarget(null)} />
       <ChangePasswordDialog user={pwTarget} onClose={() => setPwTarget(null)} />
+      <BlockUserDialog user={blockTarget} onClose={() => setBlockTarget(null)} />
 
       {/* Delete confirmation */}
       <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
@@ -467,13 +624,13 @@ export default function SettingsPage() {
                     <p className="text-sm text-muted-foreground">{user?.email}</p>
                     <Badge variant="secondary" className="mt-1 capitalize flex items-center gap-1 w-fit">
                       <Shield className="h-3 w-3" />
-                      {user?.role}
+                      {user?.role === 'api_consumer' ? 'API Consumer' : user?.role}
                     </Badge>
                   </div>
                 </div>
                 <Separator />
                 <p className="text-xs text-muted-foreground">
-                  To update your name, role, or password go to{' '}
+                  To update your name, address, or password go to{' '}
                   <a href="/dashboard/profile" className="text-primary hover:underline">
                     your profile page
                   </a>
@@ -518,8 +675,7 @@ export default function SettingsPage() {
               <CardHeader>
                 <CardTitle>User Management</CardTitle>
                 <CardDescription>
-                  Add, edit, change passwords, or remove users in your organisation.
-                  Only admins can access this section.
+                  Add, edit, suspend, or permanently block users. Only admins can access this section.
                 </CardDescription>
               </CardHeader>
               <CardContent>

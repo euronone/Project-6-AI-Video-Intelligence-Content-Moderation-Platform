@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser
 from app.config import settings
-from app.core.exceptions import ConflictError, UnauthorizedError
+from app.core.exceptions import ConflictError, ForbiddenError, UnauthorizedError
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -21,7 +21,7 @@ from app.core.security import (
     verify_password,
 )
 from app.dependencies import get_db, get_redis
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
@@ -50,15 +50,21 @@ async def register(
     db: Annotated[AsyncSession, Depends(get_db)],
     redis: Annotated[aioredis.Redis, Depends(get_redis)],
 ) -> LoginResponse:
-    existing = await db.execute(select(User).where(User.email == body.email))
-    if existing.scalar_one_or_none():
+    existing_result = await db.execute(select(User).where(User.email == body.email))
+    existing = existing_result.scalar_one_or_none()
+    if existing is not None:
+        if existing.is_blocked:
+            raise ForbiddenError(
+                "This email address has been permanently blocked and cannot be used to register."
+            )
         raise ConflictError(f"Email '{body.email}' is already registered.")
 
     user = User(
         email=body.email,
         name=body.name,
         password_hash=hash_password(body.password),
-        role=body.role,
+        role=UserRole.OPERATOR,
+        whatsapp_number=body.whatsapp_number,
     )
     db.add(user)
     await db.flush()  # get user.id before commit
@@ -94,13 +100,17 @@ async def login(
     db: Annotated[AsyncSession, Depends(get_db)],
     redis: Annotated[aioredis.Redis, Depends(get_redis)],
 ) -> LoginResponse:
-    result = await db.execute(
-        select(User).where(User.email == body.email, User.is_active.is_(True))
-    )
+    result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
 
     if user is None or not verify_password(body.password, user.password_hash):
         raise UnauthorizedError("Invalid email or password.")
+
+    if user.is_blocked:
+        raise ForbiddenError("Your account has been permanently blocked. Contact an administrator.")
+
+    if not user.is_active:
+        raise ForbiddenError("Your account has been suspended. Contact an administrator.")
 
     user_id = str(user.id)
     access_token = create_access_token(user_id, extra={"role": user.role.value})

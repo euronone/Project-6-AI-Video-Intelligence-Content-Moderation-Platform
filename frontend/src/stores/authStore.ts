@@ -13,7 +13,7 @@ interface AuthState {
 
 interface AuthActions {
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, role: 'admin' | 'operator') => Promise<void>;
+  register: (email: string, password: string, name: string, whatsapp_number?: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
   setUser: (user: User) => void;
@@ -57,10 +57,10 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         }
       },
 
-      register: async (email, password, name, role) => {
+      register: async (email, password, name, whatsapp_number?) => {
         set({ isLoading: true, error: null });
         try {
-          await apiClient.post('/auth/register', { email, password, name, role });
+          await apiClient.post('/auth/register', { email, password, name, whatsapp_number });
           set({ isLoading: false });
         } catch (err: unknown) {
           const message =

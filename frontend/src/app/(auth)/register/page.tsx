@@ -6,20 +6,25 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { ArrowLeft, Shield, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { ROUTES } from '@/lib/constants';
-import { cn } from '@/lib/utils';
+
+const E164_RE = /^\+[1-9]\d{6,14}$/;
 
 const registerSchema = z
   .object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
     email: z.string().email('Enter a valid email address'),
-    role: z.enum(['admin', 'operator'], { required_error: 'Please select a role' }),
+    whatsapp_number: z
+      .string()
+      .regex(E164_RE, 'Enter a valid WhatsApp number in E.164 format, e.g. +919876543210')
+      .or(z.literal(''))
+      .optional(),
     password: z.string().min(8, 'Password must be at least 8 characters'),
     confirmPassword: z.string(),
   })
@@ -30,36 +35,16 @@ const registerSchema = z
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
-const ROLES = [
-  {
-    value: 'admin' as const,
-    label: 'Admin',
-    description: 'Full access — manage policies, users, and all moderation decisions',
-    icon: ShieldCheck,
-  },
-  {
-    value: 'operator' as const,
-    label: 'Operator',
-    description: 'Review content, action queue items, and monitor live streams',
-    icon: ShieldAlert,
-  },
-];
-
 export default function RegisterPage() {
   const { register: registerUser, isLoading, error, clearError } = useAuth();
 
   const {
     register,
     handleSubmit,
-    watch,
-    setValue,
     formState: { errors },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { role: 'operator' },
   });
-
-  const selectedRole = watch('role');
 
   useEffect(() => {
     if (error) {
@@ -70,7 +55,8 @@ export default function RegisterPage() {
 
   const onSubmit = async (values: RegisterFormValues) => {
     try {
-      await registerUser(values.email, values.password, values.name, values.role);
+      const whatsapp = values.whatsapp_number?.trim() || undefined;
+      await registerUser(values.email, values.password, values.name, whatsapp);
       toast.success('Account created! Please sign in.');
     } catch {
       // error handled via store + toast above
@@ -94,7 +80,7 @@ export default function RegisterPage() {
             <span className="text-2xl font-bold tracking-tight">VidShield AI</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            AI Video Intelligence & Content Moderation
+            AI Video Intelligence &amp; Content Moderation
           </p>
         </div>
 
@@ -138,33 +124,27 @@ export default function RegisterPage() {
                 )}
               </div>
 
-              {/* Role selector */}
+              {/* WhatsApp number */}
               <div className="space-y-2">
-                <Label>Role</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  {ROLES.map(({ value, label, description, icon: Icon }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setValue('role', value, { shouldValidate: true })}
-                      className={cn(
-                        'flex flex-col items-start gap-1.5 rounded-lg border-2 p-3 text-left transition-colors hover:bg-accent',
-                        selectedRole === value
-                          ? 'border-primary bg-accent'
-                          : 'border-border'
-                      )}
-                      aria-pressed={selectedRole === value}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Icon className={cn('h-4 w-4', selectedRole === value ? 'text-primary' : 'text-muted-foreground')} />
-                        <span className="text-sm font-medium">{label}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-snug">{description}</p>
-                    </button>
-                  ))}
-                </div>
-                {errors.role && (
-                  <p className="text-xs text-destructive" role="alert">{errors.role.message}</p>
+                <Label htmlFor="whatsapp_number">
+                  WhatsApp number
+                  <span className="ml-1 text-xs text-muted-foreground">(optional)</span>
+                </Label>
+                <Input
+                  id="whatsapp_number"
+                  type="tel"
+                  placeholder="+919876543210"
+                  autoComplete="tel"
+                  {...register('whatsapp_number')}
+                  aria-invalid={!!errors.whatsapp_number}
+                />
+                <p className="text-xs text-muted-foreground">
+                  International format with country code, e.g. +1 for US, +91 for India
+                </p>
+                {errors.whatsapp_number && (
+                  <p className="text-xs text-destructive" role="alert">
+                    {errors.whatsapp_number.message}
+                  </p>
                 )}
               </div>
 
