@@ -22,6 +22,12 @@ from app.core.middleware import DataWrapperMiddleware, RequestContextMiddleware
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     setup_logging()
+    # Eagerly initialise the DB connection pool and Redis client so the
+    # first real request is not hit with cold-start latency.
+    from app.dependencies import get_engine, get_redis_client
+
+    get_engine()
+    get_redis_client()
     yield
     # Cleanup on shutdown (close DB engine, Redis pool, etc.)
     from app.dependencies import _engine, _redis

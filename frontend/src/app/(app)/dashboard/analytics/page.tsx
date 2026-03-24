@@ -1,13 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { BarChart3, Clock, Film, ShieldAlert } from 'lucide-react';
+import { CheckCircle, XCircle, Film, ShieldAlert } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StatCard } from '@/components/analytics/StatCard';
 import { InsightChart } from '@/components/analytics/InsightChart';
 import { HeatmapOverlay } from '@/components/analytics/HeatmapOverlay';
 import { useAnalyticsSummary, useViolationsData } from '@/hooks/useAnalytics';
-import { formatPercent } from '@/lib/utils';
 import { subDays, format } from 'date-fns';
 
 type DateRange = '7d' | '30d' | '90d';
@@ -59,28 +58,30 @@ export default function AnalyticsPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Videos Processed"
-          value={summary?.processed_count ?? '—'}
+          value={summary?.total_videos_processed ?? '—'}
           icon={Film}
           isLoading={summaryLoading}
         />
         <StatCard
           title="Violation Rate"
-          value={summary ? formatPercent(summary.violation_rate) : '—'}
+          value={summary ? `${summary.violation_rate_percent}%` : '—'}
           icon={ShieldAlert}
           isLoading={summaryLoading}
-          description={`${summary?.flagged_count ?? 0} flagged, ${summary?.rejected_count ?? 0} rejected`}
+          description={`${summary?.total_violations_detected ?? 0} detected`}
         />
         <StatCard
-          title="Avg. Latency"
-          value={summary ? `${summary.avg_latency_ms}ms` : '—'}
-          icon={Clock}
+          title="Approved"
+          value={summary?.videos_approved ?? '—'}
+          icon={CheckCircle}
           isLoading={summaryLoading}
+          description={`${summary?.videos_escalated ?? 0} escalated`}
         />
         <StatCard
-          title="P95 Latency"
-          value={summary ? `${summary.p95_latency_ms}ms` : '—'}
-          icon={BarChart3}
+          title="Rejected"
+          value={summary?.videos_rejected ?? '—'}
+          icon={XCircle}
           isLoading={summaryLoading}
+          description={`${summary?.avg_confidence ? (summary.avg_confidence * 100).toFixed(0) + '% avg confidence' : ''}`}
         />
       </div>
 

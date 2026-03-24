@@ -312,6 +312,28 @@ def run_analysis_pipeline_task(
             video.status = VideoStatus.READY
             video.updated_at = datetime.now(UTC)
 
+        # Capture result id for queue enqueue below
+        result_id = str(existing.id) if existing else None
+        if not result_id:
+            # Re-fetch to get the generated id for the newly inserted row
+            new_result = (
+                db.query(ModerationResult)
+                .filter(ModerationResult.video_id == uuid.UUID(video_id))
+                .first()
+            )
+            result_id = str(new_result.id) if new_result else None
+
+    # Enqueue for human review when decision needs escalation or is uncertain
+    _NEEDS_REVIEW = {ModerationStatus.ESCALATED, ModerationStatus.PENDING}
+    if mod_status in _NEEDS_REVIEW:
+        from app.workers.moderation_tasks import enqueue_human_review_task
+
+        enqueue_human_review_task.delay(
+            video_id=video_id,
+            moderation_result_id=result_id,
+            priority=1 if mod_status == ModerationStatus.ESCALATED else 0,
+        )
+
     logger.info(
         "run_analysis_pipeline_task_done",
         video_id=video_id,

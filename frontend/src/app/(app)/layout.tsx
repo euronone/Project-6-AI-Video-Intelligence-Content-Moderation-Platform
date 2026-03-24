@@ -32,9 +32,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, isAuthenticated]);
 
-  // Show nothing until we know the auth state
+  // Show a minimal spinner until Zustand rehydrates from localStorage.
+  // Returning null causes a blank-screen flash; a spinner is far less jarring.
   if (!hydrated || !isAuthenticated) {
-    return null;
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
   }
 
   return (

@@ -1,9 +1,11 @@
 name: CD — Production
 
 on:
-  push:
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"   # semver tags only: v1.2.3
+  # Automatic production deploy is paused during active feature development.
+  # Re-enable the tag trigger below when ready to cut a release.
+  # push:
+  #   tags:
+  #     - "v[0-9]+.[0-9]+.[0-9]+"   # semver tags only: v1.2.3
   workflow_dispatch:
     inputs:
       image_tag:

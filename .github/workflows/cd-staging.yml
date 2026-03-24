@@ -1,8 +1,10 @@
 name: CD — Staging
 
 on:
-  push:
-    branches: [main]
+  # Automatic staging deploy is paused during active feature development.
+  # Re-enable the push trigger below when ready to resume CD.
+  # push:
+  #   branches: [main]
   workflow_dispatch:
     inputs:
       image_tag:
