@@ -11,6 +11,7 @@ import {
   Shield,
   ShieldAlert,
   Upload,
+  Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/lib/constants';
@@ -33,6 +34,7 @@ const navItems: NavItem[] = [
   { label: 'Policies', href: ROUTES.moderationPolicies, icon: Shield },
   { label: 'Live Streams', href: ROUTES.live, icon: Radio },
   { label: 'Analytics', href: ROUTES.analytics, icon: BarChart3 },
+  { label: 'User Management', href: ROUTES.userManagement, icon: Users, adminOnly: true },
 ];
 
 const bottomNavItems: NavItem[] = [
