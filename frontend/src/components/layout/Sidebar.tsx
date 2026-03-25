@@ -7,6 +7,7 @@ import {
   Film,
   LayoutDashboard,
   Radio,
+  ScrollText,
   Settings,
   Shield,
   ShieldAlert,
@@ -35,6 +36,7 @@ const navItems: NavItem[] = [
   { label: 'Live Streams', href: ROUTES.live, icon: Radio },
   { label: 'Analytics', href: ROUTES.analytics, icon: BarChart3 },
   { label: 'User Management', href: ROUTES.userManagement, icon: Users, adminOnly: true },
+  { label: 'Explainability & Audit Trail', href: ROUTES.auditTrail, icon: ScrollText, adminOnly: true },
 ];
 
 const bottomNavItems: NavItem[] = [

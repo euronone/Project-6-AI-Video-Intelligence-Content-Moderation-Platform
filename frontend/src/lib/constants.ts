@@ -21,6 +21,7 @@ export const ROUTES = {
   settings: '/dashboard/settings',
   profile: '/dashboard/profile',
   userManagement: '/dashboard/users',
+  auditTrail: '/dashboard/audit',
   videos: '/videos',
   videoUpload: '/videos/upload',
   videoDetail: (id: string) => `/videos/${id}`,

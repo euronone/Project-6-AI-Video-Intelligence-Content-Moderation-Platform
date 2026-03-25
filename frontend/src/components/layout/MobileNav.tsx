@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Menu,
   Radio,
+  ScrollText,
   Settings,
   Shield,
   ShieldAlert,
@@ -32,6 +33,7 @@ const navItems = [
   { label: 'Live Streams', href: ROUTES.live, icon: Radio, adminOnly: false },
   { label: 'Analytics', href: ROUTES.analytics, icon: BarChart3, adminOnly: false },
   { label: 'User Management', href: ROUTES.userManagement, icon: Users, adminOnly: true },
+  { label: 'Explainability & Audit Trail', href: ROUTES.auditTrail, icon: ScrollText, adminOnly: true },
   { label: 'Settings', href: ROUTES.settings, icon: Settings, adminOnly: false },
 ];
 
